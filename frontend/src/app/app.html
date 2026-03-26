@@ -11,7 +11,7 @@
 
       <div class="nav-actions">
         <div class="nav-links">
-          <a [href]="homeUrl('#services')">{{ t('servicesNav') }}</a>
+          <a [href]="backendUrl('/services')">{{ t('servicesNav') }}</a>
           <a [href]="homeUrl('#providers')">{{ t('providersNav') }}</a>
           @if (isDashboardPage()) {
             <a class="btn secondary nav-login" [href]="backendUrl('/dashboard')">Dashboard</a>
@@ -85,7 +85,7 @@
                   </label>
 
                   <div class="search-submit">
-                    <button type="button" class="btn brand" (click)="load()">{{ t('search') }}</button>
+                    <button type="button" class="btn brand" (click)="submitServiceSearch()">{{ t('search') }}</button>
                   </div>
                 </div>
               </div>
@@ -117,7 +117,7 @@
                     <div class="notice">{{ service.provider.service_area }} - {{ service.provider.city }} - {{ service.duration_minutes }} {{ t('mins') }}</div>
 
                     <div class="provider-strip">
-                      <span class="avatar-pill">{{ service.provider.name }}</span>
+                      <a class="avatar-pill" [href]="backendUrl('/providers/' + service.provider.id)">{{ service.provider.name }}</a>
                       <span class="price">PKR {{ service.price | number:'1.0-0' }}</span>
                     </div>
 
@@ -153,8 +153,9 @@
                   <p>{{ provider.bio }}</p>
                   <div class="notice">{{ provider.city }} - {{ provider.experience_years }} {{ t('yearsExperience') }} - PKR {{ provider.hourly_rate | number:'1.0-0' }}/hr</div>
 
-                  <div class="stack-actions">
-                    <a class="btn secondary" [href]="'tel:' + formatPhone(provider.phone)">{{ t('call') }}</a>
+                    <div class="stack-actions">
+                      <a class="btn secondary" [href]="backendUrl('/providers/' + provider.id)">Profile</a>
+                      <a class="btn secondary" [href]="'tel:' + formatPhone(provider.phone)">{{ t('call') }}</a>
                     <a class="btn brand" [href]="'https://wa.me/' + formatPhone(provider.phone)" target="_blank" rel="noopener">{{ t('whatsapp') }}</a>
                   </div>
                 </article>
@@ -169,6 +170,276 @@
         </div>
       </main>
     }
+  } @else if (isServicesPage()) {
+    <main class="page">
+      <div class="container search-layout">
+        @if (pageLoading()) {
+          <div class="loading-card card"><h2>Loading services...</h2></div>
+        } @else if (servicesPageData(); as list) {
+          <section class="section" id="services">
+            <datalist id="servicesLocationSuggestions">
+              @for (suggestion of list.location_suggestions; track suggestion) {
+                <option [value]="suggestion"></option>
+              }
+            </datalist>
+
+            <div class="search-shell services-search-shell">
+              <div class="search-panel listing-search-panel">
+                <h3>{{ t('searchTitle') }}</h3>
+
+                <div class="hero-search-grid">
+                  <label>
+                    {{ t('whatNeed') }}
+                    <input
+                      [ngModel]="search()"
+                      (ngModelChange)="search.set($event)"
+                      [placeholder]="t('whatNeedPlaceholder')">
+                  </label>
+
+                  <label>
+                    {{ t('location') }}
+                    <input
+                      [ngModel]="location()"
+                      (ngModelChange)="location.set($event)"
+                      list="servicesLocationSuggestions"
+                      [placeholder]="t('locationPlaceholder')">
+                  </label>
+
+                  <label>
+                    {{ t('category') }}
+                    <select [ngModel]="category()" (ngModelChange)="category.set($event)">
+                      <option value="">{{ t('allCategories') }}</option>
+                      @for (item of list.categories; track item.id) {
+                        <option [value]="item.slug">{{ item.name }}</option>
+                      }
+                    </select>
+                  </label>
+
+                  <div class="search-submit">
+                    <button type="button" class="btn brand" (click)="submitServiceSearch()">{{ t('search') }}</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="side-stack">
+                <div class="card compact-card">
+                  <div class="location-row">
+                    <strong>{{ t('currentLocation') }}</strong>
+                    <button type="button" class="btn secondary" (click)="useCurrentLocation()">{{ t('useCurrentLocation') }}</button>
+                  </div>
+                  <p class="muted current-location-text">{{ currentLocationText() }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="results-head">
+              <div>
+                <h2 style="margin:0 0 8px;">Services for users</h2>
+                <div class="search-summary">{{ list.summary.results }} result(s) found</div>
+              </div>
+              <button class="btn secondary" type="button" (click)="clearFilters()">Clear filters</button>
+            </div>
+
+            <div class="grid grid-3">
+              @for (service of list.services; track service.id) {
+                <article class="card service-card">
+                  @if (service.image_url) {
+                    <img class="service-thumb" [src]="service.image_url" [alt]="service.title">
+                  } @else {
+                    <div class="service-thumb"></div>
+                  }
+                  <div class="service-card-body">
+                    <span class="badge">{{ service.category }}</span>
+                    <h3>{{ service.title }}</h3>
+                    <p>{{ service.short_description }}</p>
+                    <div class="notice">{{ service.provider.service_area }} - {{ service.provider.city }} - {{ service.duration_minutes }} {{ t('mins') }}</div>
+                    <div class="provider-strip">
+                      <a class="avatar-pill" [href]="backendUrl('/providers/' + service.provider.id)">{{ service.provider.name }}</a>
+                      <span class="price">PKR {{ service.price | number:'1.0-0' }}</span>
+                    </div>
+                    <div class="stack-actions">
+                      <a class="btn brand" [href]="backendUrl('/services/' + service.slug)">{{ t('viewDetails') }}</a>
+                      <a class="btn secondary" [href]="backendUrl('/providers/' + service.provider.id)">Provider</a>
+                    </div>
+                  </div>
+                </article>
+              } @empty {
+                <article class="card">
+                  <h3>{{ t('noServices') }}</h3>
+                  <p>{{ t('noServicesText') }}</p>
+                </article>
+              }
+            </div>
+          </section>
+        } @else {
+          <div class="flash error">{{ pageError() || 'Services load nahi ho sakin.' }}</div>
+        }
+      </div>
+    </main>
+  } @else if (isServiceDetailPage()) {
+    <main class="page">
+      <div class="container">
+        @if (pageLoading()) {
+          <div class="loading-card card"><h2>Loading service details...</h2></div>
+        } @else if (serviceDetailData(); as detail) {
+          <div class="detail-grid">
+            <div class="detail-panel">
+              @if (detail.service.image_url) {
+                <img class="detail-cover" [src]="detail.service.image_url" [alt]="detail.service.title">
+              } @else {
+                <div class="detail-cover"></div>
+              }
+              <span class="badge">{{ detail.service.category }}</span>
+              <h1 style="margin-bottom:10px;">{{ detail.service.title }}</h1>
+              <p class="muted" style="font-size:1.04rem;">{{ detail.service.short_description }}</p>
+              <div class="detail-meta">
+                <div class="meta-box"><strong>Price</strong><div>PKR {{ detail.service.price | number:'1.0-0' }}</div></div>
+                <div class="meta-box"><strong>Duration</strong><div>{{ detail.service.duration_minutes }} minutes</div></div>
+                <div class="meta-box"><strong>Provider</strong><div>{{ detail.service.provider.name }}</div></div>
+              </div>
+              <div class="notice">{{ detail.service.description }}</div>
+              <div class="notice" style="margin-top:16px;">Service area: {{ detail.provider_location_label }}</div>
+              <div class="notice" style="margin-top:16px;">
+                <strong>Phone</strong>
+                <div>{{ detail.service.provider.phone }}</div>
+              </div>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;">
+                @if (detail.auth.can_book) {
+                  <a class="btn brand" [href]="backendUrl('/services/' + detail.service.slug + '/book')">Book this service</a>
+                } @else if (!detail.auth.logged_in) {
+                  <a class="btn brand" [href]="backendUrl('/login')">Login to book</a>
+                }
+                <a class="btn secondary" [href]="'tel:' + formatPhone(detail.service.provider.phone)">Call provider</a>
+                <a class="btn brand" [href]="'https://wa.me/' + formatPhone(detail.service.provider.phone)" target="_blank" rel="noopener">WhatsApp</a>
+                <a class="btn secondary" [href]="backendUrl('/providers/' + detail.service.provider.id)">View provider</a>
+              </div>
+            </div>
+            <div class="card map-card">
+              <div>
+                <h3>Provider location</h3>
+                <p class="muted">Location ko map par dekhein aur area quickly samajh lein.</p>
+              </div>
+              <div class="location-row">
+                <span class="badge">{{ detail.service.provider.city }}</span>
+                <a class="location-link" [href]="detail.provider_map_search_url" target="_blank" rel="noopener">Open in Google Maps</a>
+              </div>
+              <div class="notice">{{ detail.provider_location_label }}</div>
+              <iframe class="map-embed" [attr.src]="detail.provider_map_url" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Provider location map"></iframe>
+              <div>
+                <h3>Related services</h3>
+                <p class="muted">Isi category me aur bhi options available hain.</p>
+                <div class="list">
+                  @for (related of detail.related_services; track related.id) {
+                    <a class="notice" [href]="backendUrl('/services/' + related.slug)">{{ related.title }} by {{ related.provider_name }}</a>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        } @else {
+          <div class="flash error">{{ pageError() || 'Service details load nahi ho sakin.' }}</div>
+        }
+      </div>
+    </main>
+  } @else if (isProviderDetailPage()) {
+    <main class="page">
+      <div class="container">
+        @if (pageLoading()) {
+          <div class="loading-card card"><h2>Loading provider details...</h2></div>
+        } @else if (providerDetailData(); as detail) {
+          <div class="grid grid-2">
+            <div class="card map-card">
+              <div>
+                <span class="badge">{{ detail.provider.service_area }}</span>
+                <h1>{{ detail.provider.name }}</h1>
+                <p>{{ detail.provider.bio }}</p>
+                <p class="muted">{{ detail.provider.experience_years }} years experience - PKR {{ detail.provider.hourly_rate | number:'1.0-0' }}/hr - {{ detail.provider.availability }}</p>
+                <p class="muted">Approval: {{ detail.provider.approved ? 'Approved' : 'Pending admin approval' }}</p>
+              </div>
+              <div class="notice">
+                <strong>Phone</strong>
+                <div>{{ detail.provider.phone }}</div>
+              </div>
+              <div class="stack-actions">
+                <a class="btn secondary" [href]="'tel:' + formatPhone(detail.provider.phone)">Call now</a>
+                <a class="btn brand" [href]="'https://wa.me/' + formatPhone(detail.provider.phone)" target="_blank" rel="noopener">WhatsApp</a>
+              </div>
+              <div class="location-row">
+                <div class="notice">{{ detail.location_label }}</div>
+                <a class="location-link" [href]="detail.provider_map_search_url" target="_blank" rel="noopener">Open in Google Maps</a>
+              </div>
+              <iframe class="map-embed" [attr.src]="detail.provider_map_url" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Provider location map"></iframe>
+            </div>
+            <div class="card">
+              <h3>Services by this provider</h3>
+              <div class="list">
+                @for (service of detail.services; track service.id) {
+                  <a class="notice" [href]="backendUrl('/services/' + service.slug)">{{ service.title }} - {{ detail.provider.city }} - PKR {{ service.price | number:'1.0-0' }}</a>
+                }
+              </div>
+            </div>
+          </div>
+        } @else {
+          <div class="flash error">{{ pageError() || 'Provider details load nahi ho sakin.' }}</div>
+        }
+      </div>
+    </main>
+  } @else if (isBookingCreatePage()) {
+    <main class="page">
+      <div class="container auth-shell">
+        @if (pageLoading()) {
+          <div class="loading-card card"><h2>Loading booking form...</h2></div>
+        } @else if (bookingCreateData(); as bookingPage) {
+          <div class="auth-grid service-form-shell">
+            <div class="auth-showcase">
+              <span class="kicker">Booking Request</span>
+              <h2>{{ bookingPage.service.title }}</h2>
+              <p>{{ bookingPage.service.short_description }}</p>
+              <div class="list" style="margin-top:22px;">
+                <div class="notice">Provider: {{ bookingPage.service.provider_name }}</div>
+                <div class="notice">Price: PKR {{ bookingPage.service.price | number:'1.0-0' }}</div>
+                <div class="notice">Duration: {{ bookingPage.service.duration_minutes }} minutes</div>
+              </div>
+            </div>
+            <div class="auth-card">
+              <span class="badge">Complete your booking</span>
+              <h1>Schedule service</h1>
+              <p class="muted">Correct date, address, aur payment method select karein taa ke provider ko clear booking request mile.</p>
+              @if (authError()) { <div class="flash error">{{ authError() }}</div> }
+              <form (ngSubmit)="submitBooking()">
+                <div class="form-section">
+                  <div class="form-section-title">Appointment details</div>
+                  <div class="grid grid-2">
+                    <label>Scheduled date and time<input type="datetime-local" name="scheduled_at" [(ngModel)]="bookingForm.scheduled_at" required></label>
+                    <label>Payment method
+                      <select name="payment_method" [(ngModel)]="bookingForm.payment_method" required>
+                        @for (method of bookingPage.payment_methods; track method) {
+                          <option [value]="method">{{ method }}</option>
+                        }
+                      </select>
+                    </label>
+                  </div>
+                </div>
+                <div class="form-section">
+                  <div class="form-section-title">Location</div>
+                  <label>Service address<input type="text" name="address" [(ngModel)]="bookingForm.address" placeholder="Complete service address" required></label>
+                </div>
+                <div class="form-section">
+                  <div class="form-section-title">Extra notes</div>
+                  <label>Notes<textarea name="notes" [(ngModel)]="bookingForm.notes" placeholder="Any issue details, floor number, timing notes"></textarea></label>
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                  <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : 'Confirm booking' }}</button>
+                  <a class="btn secondary" [href]="backendUrl('/services/' + bookingPage.service.slug)">Back</a>
+                </div>
+              </form>
+            </div>
+          </div>
+        } @else {
+          <div class="flash error">{{ pageError() || 'Booking page load nahi ho saka.' }}</div>
+        }
+      </div>
+    </main>
   } @else if (isDashboardPage()) {
     <main class="page">
       <div class="container">

@@ -170,6 +170,79 @@ interface ServiceFormData {
   providers?: Array<{ id: number; name: string }>;
 }
 
+interface ServicesIndexResponse {
+  services: ServiceItem[];
+  categories: Array<{ id: number; name: string; slug: string }>;
+  location_suggestions: string[];
+  filters: {
+    search?: string;
+    location?: string;
+    category?: string;
+  };
+  summary: {
+    results: number;
+    search?: string;
+    location?: string;
+    category?: string;
+  };
+}
+
+interface ServiceDetailResponse {
+  service: ServiceItem & {
+    description: string;
+    price_type: string;
+  };
+  provider_location_label: string;
+  provider_map_url: string;
+  provider_map_search_url: string;
+  related_services: Array<{
+    id: number;
+    title: string;
+    slug: string;
+    provider_name: string;
+  }>;
+  auth: {
+    logged_in: boolean;
+    role: string | null;
+    can_book: boolean;
+  };
+}
+
+interface ProviderDetailResponse {
+  provider: ProviderItem & {
+    address: string;
+    availability: string;
+    approved: boolean;
+  };
+  location_label: string;
+  provider_map_url: string;
+  provider_map_search_url: string;
+  services: Array<{
+    id: number;
+    title: string;
+    slug: string;
+    price: number;
+    category: string | null;
+  }>;
+}
+
+interface BookingCreateResponse {
+  service: {
+    id: number;
+    title: string;
+    slug: string;
+    short_description: string;
+    price: number;
+    duration_minutes: number;
+    provider_name: string;
+    provider_phone: string;
+  };
+  customer: {
+    address: string;
+  };
+  payment_methods: string[];
+}
+
 type LocaleKey = 'en' | 'ur' | 'sd';
 type CopyMap = Record<LocaleKey, Record<string, string>>;
 
@@ -313,6 +386,10 @@ export class App {
   readonly pageError = signal('');
   readonly providerProfileData = signal<ProviderProfileData | null>(null);
   readonly serviceFormData = signal<ServiceFormData | null>(null);
+  readonly servicesPageData = signal<ServicesIndexResponse | null>(null);
+  readonly serviceDetailData = signal<ServiceDetailResponse | null>(null);
+  readonly providerDetailData = signal<ProviderDetailResponse | null>(null);
+  readonly bookingCreateData = signal<BookingCreateResponse | null>(null);
 
   loginForm = {
     email: '',
@@ -369,13 +446,29 @@ export class App {
   dashboardCategoryEdit: Record<number, { name: string; icon: string; description: string }> = {};
   providerBookingStatus: Record<number, string> = {};
   customerReview: Record<number, { rating: number; comment: string }> = {};
+  bookingForm = {
+    scheduled_at: '',
+    address: '',
+    notes: '',
+    payment_method: 'Cash on Service',
+  };
 
   constructor() {
     const storedLocale = this.readStoredLocale();
     this.applyLocale(storedLocale);
 
     if (this.isHomePage()) {
+      this.hydrateFiltersFromQuery();
       this.load();
+    } else if (this.isServicesPage()) {
+      this.hydrateFiltersFromQuery();
+      this.loadServicesPage();
+    } else if (this.isServiceDetailPage()) {
+      this.loadServiceDetailPage();
+    } else if (this.isProviderDetailPage()) {
+      this.loadProviderDetailPage();
+    } else if (this.isBookingCreatePage()) {
+      this.loadBookingCreatePage();
     } else if (this.isDashboardPage()) {
       this.loadDashboard();
     } else if (this.isProviderProfilePage()) {
@@ -401,6 +494,22 @@ export class App {
 
   isLoginPage(): boolean {
     return this.currentPath() === '/login';
+  }
+
+  isServicesPage(): boolean {
+    return this.currentPath() === '/services';
+  }
+
+  isServiceDetailPage(): boolean {
+    return /^\/services\/[^/]+$/.test(this.currentPath());
+  }
+
+  isProviderDetailPage(): boolean {
+    return /^\/providers\/\d+$/.test(this.currentPath());
+  }
+
+  isBookingCreatePage(): boolean {
+    return /^\/services\/[^/]+\/book$/.test(this.currentPath());
   }
 
   isRegisterPage(): boolean {
@@ -487,6 +596,13 @@ export class App {
     this.location.set('');
     this.category.set('');
     this.currentLocationText.set(this.t('allowLocation'));
+    if (this.isServicesPage()) {
+      this.navigateWithFilters('/services');
+      this.loadServicesPage();
+      return;
+    }
+
+    this.navigateWithFilters('/');
     this.load();
   }
 
@@ -532,6 +648,17 @@ export class App {
           this.authError.set(error?.error?.message ?? 'Registration failed.');
         }
       });
+  }
+
+  submitServiceSearch(): void {
+    if (this.isServicesPage()) {
+      this.navigateWithFilters('/services');
+      this.loadServicesPage();
+      return;
+    }
+
+    this.navigateWithFilters('/');
+    this.load();
   }
 
   onServiceFileChange(event: Event): void {
@@ -750,6 +877,22 @@ export class App {
       });
   }
 
+  submitBooking(): void {
+    this.authLoading.set(true);
+    this.authError.set('');
+
+    this.http.post<AuthResponse>(this.backendUrl(this.currentPath()), this.bookingForm, {
+      headers: this.authHeaders(),
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => window.location.href = response.redirect,
+        error: (error) => {
+          this.authLoading.set(false);
+          this.authError.set(error?.error?.message ?? 'Booking request failed.');
+        }
+      });
+  }
+
   submitServiceForm(): void {
     this.authLoading.set(true);
     this.authError.set('');
@@ -810,6 +953,22 @@ export class App {
     return target ? target.split('=').slice(1).join('=') : '';
   }
 
+  private navigateWithFilters(path: string): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (this.search().trim()) params.set('search', this.search().trim());
+    if (this.location().trim()) params.set('location', this.location().trim());
+    if (this.category().trim()) params.set('category', this.category().trim());
+
+    const query = params.toString();
+    const nextUrl = `${path}${query ? `?${query}` : ''}`;
+    window.history.replaceState({}, '', nextUrl);
+    this.currentPath.set(path);
+  }
+
   private applyLocale(locale: LocaleKey): void {
     this.locale.set(locale);
     this.currentLocationText.set(this.t('allowLocation'));
@@ -834,6 +993,17 @@ export class App {
     return window.location.pathname;
   }
 
+  private hydrateFiltersFromQuery(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    this.search.set(params.get('search') ?? '');
+    this.location.set(params.get('location') ?? '');
+    this.category.set(params.get('category') ?? '');
+  }
+
   private detectBackendOrigin(): string {
     if (typeof window === 'undefined') {
       return '';
@@ -849,6 +1019,7 @@ export class App {
   private loadProviderProfilePage(): void {
     this.loading.set(false);
     this.pageLoading.set(true);
+    this.pageError.set('');
 
     this.http.get<ProviderProfileData>(this.backendUrl('/provider/profile/data'), {
       headers: this.authHeaders(),
@@ -879,6 +1050,7 @@ export class App {
   private loadServiceFormPage(): void {
     this.loading.set(false);
     this.pageLoading.set(true);
+    this.pageError.set('');
 
     this.http.get<ServiceFormData>(this.serviceFormDataUrl(), {
       headers: this.authHeaders(),
@@ -901,6 +1073,97 @@ export class App {
         },
         error: () => {
           this.pageError.set('Service form load nahi ho saka.');
+          this.pageLoading.set(false);
+        }
+      });
+  }
+
+  private loadServicesPage(): void {
+    const params = new URLSearchParams();
+
+    if (this.search().trim()) params.set('search', this.search().trim());
+    if (this.location().trim()) params.set('location', this.location().trim());
+    if (this.category().trim()) params.set('category', this.category().trim());
+
+    const query = params.toString();
+
+    this.loading.set(false);
+    this.pageLoading.set(true);
+    this.pageError.set('');
+
+    this.http.get<ServicesIndexResponse>(this.backendUrl('/services/data') + (query ? `?${query}` : ''))
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.servicesPageData.set(response);
+          this.pageLoading.set(false);
+        },
+        error: () => {
+          this.pageError.set('Services load nahi ho sakin.');
+          this.pageLoading.set(false);
+        }
+      });
+  }
+
+  private loadServiceDetailPage(): void {
+    this.loading.set(false);
+    this.pageLoading.set(true);
+    this.pageError.set('');
+
+    this.http.get<ServiceDetailResponse>(this.backendUrl(`${this.currentPath()}/data`))
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.serviceDetailData.set(response);
+          this.pageLoading.set(false);
+        },
+        error: () => {
+          this.pageError.set('Service details load nahi ho sakin.');
+          this.pageLoading.set(false);
+        }
+      });
+  }
+
+  private loadProviderDetailPage(): void {
+    this.loading.set(false);
+    this.pageLoading.set(true);
+    this.pageError.set('');
+
+    this.http.get<ProviderDetailResponse>(this.backendUrl(`${this.currentPath()}/data`))
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.providerDetailData.set(response);
+          this.pageLoading.set(false);
+        },
+        error: () => {
+          this.pageError.set('Provider details load nahi ho sakin.');
+          this.pageLoading.set(false);
+        }
+      });
+  }
+
+  private loadBookingCreatePage(): void {
+    this.loading.set(false);
+    this.pageLoading.set(true);
+    this.pageError.set('');
+
+    this.http.get<BookingCreateResponse>(this.backendUrl(`${this.currentPath()}/data`), {
+      headers: this.authHeaders(),
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.bookingCreateData.set(response);
+          this.bookingForm = {
+            scheduled_at: '',
+            address: response.customer.address ?? '',
+            notes: '',
+            payment_method: response.payment_methods[0] ?? 'Cash on Service',
+          };
+          this.pageLoading.set(false);
+        },
+        error: () => {
+          this.pageError.set('Booking page load nahi ho saka.');
           this.pageLoading.set(false);
         }
       });
