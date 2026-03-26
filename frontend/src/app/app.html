@@ -1,0 +1,574 @@
+<div class="app-shell" *ngIf="!loading(); else loadingBlock">
+  <header class="topbar">
+    <div class="container nav">
+      <a class="brand" [href]="homeUrl()">
+        <span class="brand-mark">GK</span>
+        <span class="brand-text">
+          <strong>GharKaam</strong>
+          <small>Pakistan</small>
+        </span>
+      </a>
+
+      <div class="nav-actions">
+        <div class="nav-links">
+          <a [href]="homeUrl('#services')">{{ t('servicesNav') }}</a>
+          <a [href]="homeUrl('#providers')">{{ t('providersNav') }}</a>
+          @if (isDashboardPage()) {
+            <a class="btn secondary nav-login" [href]="backendUrl('/dashboard')">Dashboard</a>
+            <button type="button" class="btn brand nav-login" (click)="logout()">Logout</button>
+          } @else {
+          @if (!isLoginPage()) {
+            <a class="btn secondary nav-login" [href]="backendUrl('/login')">{{ t('login') }}</a>
+          }
+          @if (!isRegisterPage()) {
+            <a class="btn brand nav-login" [href]="backendUrl('/register')">{{ t('register') }}</a>
+          }
+          }
+        </div>
+
+        <div class="locale-switcher">
+          <button type="button" class="locale-link" [class.active]="locale() === 'en'" (click)="setLocale('en')">EN</button>
+          <button type="button" class="locale-link" [class.active]="locale() === 'ur'" (click)="setLocale('ur')">اردو</button>
+          <button type="button" class="locale-link" [class.active]="locale() === 'sd'" (click)="setLocale('sd')">سنڌي</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  @if (isHomePage()) {
+    @if (data(); as view) {
+      <main class="page" id="top">
+        <div class="container search-layout">
+          <section class="section" id="services">
+            <datalist id="locationSuggestions">
+              @for (suggestion of view.location_suggestions; track suggestion) {
+                <option [value]="suggestion"></option>
+              }
+            </datalist>
+
+            @if (search() || location() || category()) {
+              <div class="section-head compact-head">
+                <button type="button" class="btn secondary" (click)="clearFilters()">{{ t('clearFilters') }}</button>
+              </div>
+            }
+
+            <div class="search-shell services-search-shell">
+              <div class="search-panel listing-search-panel">
+                <h3>{{ t('searchTitle') }}</h3>
+
+                <div class="hero-search-grid">
+                  <label>
+                    {{ t('whatNeed') }}
+                    <input
+                      [ngModel]="search()"
+                      (ngModelChange)="search.set($event)"
+                      [placeholder]="t('whatNeedPlaceholder')">
+                  </label>
+
+                  <label>
+                    {{ t('location') }}
+                    <input
+                      [ngModel]="location()"
+                      (ngModelChange)="location.set($event)"
+                      list="locationSuggestions"
+                      [placeholder]="t('locationPlaceholder')">
+                  </label>
+
+                  <label>
+                    {{ t('category') }}
+                    <select [ngModel]="category()" (ngModelChange)="category.set($event)">
+                      <option value="">{{ t('allCategories') }}</option>
+                      @for (item of view.categories; track item.id) {
+                        <option [value]="item.slug">{{ item.name }}</option>
+                      }
+                    </select>
+                  </label>
+
+                  <div class="search-submit">
+                    <button type="button" class="btn brand" (click)="load()">{{ t('search') }}</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="side-stack">
+                <div class="card compact-card">
+                  <div class="location-row">
+                    <strong>{{ t('currentLocation') }}</strong>
+                    <button type="button" class="btn secondary" (click)="useCurrentLocation()">{{ t('useCurrentLocation') }}</button>
+                  </div>
+                  <p class="muted current-location-text">{{ currentLocationText() }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-3">
+              @for (service of view.services; track service.id) {
+                <article class="card service-card">
+                  @if (service.image_url) {
+                    <img class="service-thumb" [src]="service.image_url" [alt]="service.title">
+                  } @else {
+                    <div class="service-thumb"></div>
+                  }
+
+                  <div class="service-card-body">
+                    <span class="badge">{{ service.category }}</span>
+                    <h3>{{ service.title }}</h3>
+                    <p>{{ service.short_description }}</p>
+                    <div class="notice">{{ service.provider.service_area }} - {{ service.provider.city }} - {{ service.duration_minutes }} {{ t('mins') }}</div>
+
+                    <div class="provider-strip">
+                      <span class="avatar-pill">{{ service.provider.name }}</span>
+                      <span class="price">PKR {{ service.price | number:'1.0-0' }}</span>
+                    </div>
+
+                    <div class="stack-actions">
+                      <a class="btn brand" [href]="backendUrl('/services/' + service.slug)">{{ t('viewDetails') }}</a>
+                      <a class="btn secondary" [href]="'tel:' + formatPhone(service.provider.phone)">{{ t('call') }}</a>
+                      <a class="btn secondary" [href]="'https://wa.me/' + formatPhone(service.provider.phone)" target="_blank" rel="noopener">{{ t('whatsapp') }}</a>
+                    </div>
+                  </div>
+                </article>
+              } @empty {
+                <article class="card">
+                  <h3>{{ t('noServices') }}</h3>
+                  <p>{{ t('noServicesText') }}</p>
+                </article>
+              }
+            </div>
+          </section>
+
+          <section class="section" id="providers">
+            <div class="section-head">
+              <div>
+                <h2>{{ t('topProviders') }}</h2>
+                <p>{{ t('topProvidersText') }}</p>
+              </div>
+            </div>
+
+            <div class="grid grid-3">
+              @for (provider of view.providers; track provider.id) {
+                <article class="card">
+                  <span class="badge">{{ provider.service_area }}</span>
+                  <h3>{{ provider.name }}</h3>
+                  <p>{{ provider.bio }}</p>
+                  <div class="notice">{{ provider.city }} - {{ provider.experience_years }} {{ t('yearsExperience') }} - PKR {{ provider.hourly_rate | number:'1.0-0' }}/hr</div>
+
+                  <div class="stack-actions">
+                    <a class="btn secondary" [href]="'tel:' + formatPhone(provider.phone)">{{ t('call') }}</a>
+                    <a class="btn brand" [href]="'https://wa.me/' + formatPhone(provider.phone)" target="_blank" rel="noopener">{{ t('whatsapp') }}</a>
+                  </div>
+                </article>
+              } @empty {
+                <article class="card">
+                  <h3>{{ t('noProviders') }}</h3>
+                  <p>{{ t('noProvidersText') }}</p>
+                </article>
+              }
+            </div>
+          </section>
+        </div>
+      </main>
+    }
+  } @else if (isDashboardPage()) {
+    <main class="page">
+      <div class="container">
+        @if (dashboardLoading()) {
+          <div class="loading-card card"><h2>Loading dashboard...</h2></div>
+        } @else if (dashboard(); as dash) {
+          <div class="dashboard-page">
+            @if (authError()) {
+              <div class="flash error">{{ authError() }}</div>
+            }
+            <section class="dashboard-hero-shell card">
+              <div class="dashboard-summary">
+                <span class="kicker">{{ dash.role | titlecase }} Dashboard</span>
+                <h1>{{ dash.user.name }}</h1>
+                <p class="muted">{{ dash.user.email }} - {{ dash.user.role }}</p>
+                <div class="dashboard-stats-grid">
+                  @for (item of (dash.stats | keyvalue); track item.key) {
+                    <div class="card stat-lite">
+                      <span>{{ item.key.replaceAll('_', ' ') }}</span>
+                      <strong>{{ item.value }}</strong>
+                    </div>
+                  }
+                </div>
+              </div>
+              <div class="dashboard-notices card">
+                <h3>Notifications</h3>
+                @for (note of dash.notifications; track note.title + note.message) {
+                  <div class="notice">{{ note.title }}<br><span class="muted">{{ note.message }}</span></div>
+                } @empty {
+                  <div class="notice">No notifications yet.</div>
+                }
+              </div>
+            </section>
+
+            @if (dash.role === 'admin') {
+              <section class="card dashboard-block">
+                <h3>Category management</h3>
+                <form class="grid grid-2" (ngSubmit)="createCategory()">
+                  <label>Name<input type="text" name="category_name" [(ngModel)]="dashboardCategoryForm.name" required></label>
+                  <label>Icon<input type="text" name="category_icon" [(ngModel)]="dashboardCategoryForm.icon"></label>
+                  <label class="full-span">Description<textarea name="category_description" [(ngModel)]="dashboardCategoryForm.description"></textarea></label>
+                  <div class="stack-actions">
+                    <button class="btn brand" type="submit" [disabled]="dashboardActionKey('create-category')">{{ dashboardActionKey('create-category') ? 'Please wait...' : 'Add category' }}</button>
+                  </div>
+                </form>
+
+                <div class="grid grid-2">
+                  @for (category of dash.adminCategories ?? []; track category.id) {
+                    <form class="quick-item quick-item-form" (ngSubmit)="updateCategory(category.id, category.update_url)">
+                      <div class="grid form-mini">
+                        <label>Name<input type="text" [name]="'cat_name_' + category.id" [(ngModel)]="$any(dashboardCategoryEdit[category.id]).name" required></label>
+                        <label>Icon<input type="text" [name]="'cat_icon_' + category.id" [(ngModel)]="$any(dashboardCategoryEdit[category.id]).icon"></label>
+                        <label class="full-span">Description<textarea [name]="'cat_description_' + category.id" [(ngModel)]="$any(dashboardCategoryEdit[category.id]).description"></textarea></label>
+                      </div>
+                      <div class="stack-actions">
+                        <button class="btn secondary" type="submit" [disabled]="dashboardActionKey('update-category-' + category.id)">{{ dashboardActionKey('update-category-' + category.id) ? 'Saving...' : 'Update' }}</button>
+                        <button class="btn danger" type="button" (click)="deleteItem(category.delete_url, 'delete-category-' + category.id)" [disabled]="dashboardActionKey('delete-category-' + category.id)">Delete</button>
+                      </div>
+                    </form>
+                  }
+                </div>
+              </section>
+
+              <section class="card dashboard-block">
+                <h3>Website traffic</h3>
+                <div class="grid grid-3">
+                  <div class="card">
+                    <h3>Top sources</h3>
+                    @for (item of dash.trafficSummary?.top_sources ?? []; track item.label) {
+                      <div class="notice">{{ item.label }} - {{ item.total }}</div>
+                    }
+                  </div>
+                  <div class="card">
+                    <h3>Top pages</h3>
+                    @for (item of dash.trafficSummary?.top_pages ?? []; track item.label) {
+                      <div class="notice">{{ item.label }} - {{ item.total }}</div>
+                    }
+                  </div>
+                  <div class="card">
+                    <h3>Recent visits</h3>
+                    @for (item of dash.trafficSummary?.latest_visits ?? []; track (item.path ?? '') + (item.visited_at ?? '')) {
+                      <div class="notice">{{ item.source }} - {{ item.path }} - {{ item.device_type }}<br><span class="muted">{{ item.visited_at }}</span></div>
+                    }
+                  </div>
+                </div>
+              </section>
+
+              <section class="card dashboard-block">
+                <h3>Providers</h3>
+                <div class="grid grid-2">
+                  @for (provider of dash.providers ?? []; track provider.id) {
+                    <div class="quick-item">
+                      <div>
+                        <strong>{{ provider.name }}</strong>
+                        <div class="muted">{{ provider.service_area }} - {{ provider.approved ? 'Approved' : 'Pending' }}</div>
+                      </div>
+                      <button class="btn secondary" type="button" (click)="toggleProviderApproval(provider.approval_url || '', provider.id)" [disabled]="dashboardActionKey('provider-' + provider.id)">{{ provider.approved ? 'Set pending' : 'Approve' }}</button>
+                    </div>
+                  }
+                </div>
+              </section>
+
+              <section class="card dashboard-block">
+                <h3>Services</h3>
+                <div class="grid grid-2">
+                  @for (service of dash.services ?? []; track service['id']) {
+                    <div class="quick-item">
+                      <div>
+                        <strong>{{ service['title'] }}</strong>
+                        <div class="muted">{{ service['provider'] }} - {{ service['category'] }} - {{ service['status'] }}</div>
+                      </div>
+                      <div class="stack-actions">
+                        <a class="btn secondary" [href]="service['edit_url']">Edit</a>
+                        <button class="btn danger" type="button" (click)="deleteItem($any(service['delete_url']), 'delete-service-' + service['id'])" [disabled]="dashboardActionKey('delete-service-' + service['id'])">Delete</button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </section>
+            }
+
+            @if (dash.role === 'provider') {
+              <section class="card dashboard-block">
+                <h3>Provider actions</h3>
+                <div class="stack-actions">
+                  <a class="btn secondary" [href]="dash.actions?.edit_profile_url || '#'">Edit profile</a>
+                  <a class="btn brand" [href]="dash.actions?.add_service_url || '#'">Add new service</a>
+                </div>
+                <div class="grid grid-2" style="margin-top:18px;">
+                  @for (service of dash.services ?? []; track service['id']) {
+                    <div class="quick-item">
+                      <div>
+                        <strong>{{ service['title'] }}</strong>
+                        <div class="muted">{{ service['category'] }} - PKR {{ service['price'] }} - {{ service['status'] }}</div>
+                      </div>
+                      <div class="stack-actions">
+                        <a class="btn secondary" [href]="service['edit_url']">Edit</a>
+                        <button class="btn danger" type="button" (click)="deleteItem($any(service['delete_url']), 'delete-provider-service-' + service['id'])" [disabled]="dashboardActionKey('delete-provider-service-' + service['id'])">Delete</button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </section>
+
+              <section class="card dashboard-block">
+                <h3>Incoming bookings</h3>
+                <div class="grid grid-2">
+                  @for (booking of dash.bookings ?? []; track booking['id']) {
+                    <div class="quick-item">
+                      <div>
+                        <strong>{{ booking['customer'] }}</strong>
+                        <div class="muted">{{ booking['service'] }} - {{ booking['schedule'] }} - {{ booking['status'] }}</div>
+                      </div>
+                      <form class="status-form" (ngSubmit)="updateBookingStatus($any(booking['status_url']), $any(booking['id']))">
+                        <select [name]="'provider_status_' + booking['id']" [(ngModel)]="$any(providerBookingStatus[$any(booking['id'])])">
+                          <option value="accepted">Accept</option>
+                          <option value="rejected">Reject</option>
+                          <option value="in_progress">In progress</option>
+                          <option value="completed">Completed</option>
+                        </select>
+                        <button class="btn brand" type="submit" [disabled]="dashboardActionKey('booking-' + booking['id'])">Save</button>
+                      </form>
+                    </div>
+                  }
+                </div>
+              </section>
+            }
+
+            @if (dash.role === 'customer') {
+              <section class="card dashboard-block">
+                <h3>Browse categories</h3>
+                <div class="grid grid-3">
+                  @for (category of dash.categories ?? []; track category.name) {
+                    <a class="quick-item" [href]="category.url">
+                      <div>
+                        <strong>{{ category.name }}</strong>
+                        <div class="muted">{{ category.count }} services available</div>
+                      </div>
+                      <span class="badge">Open</span>
+                    </a>
+                  }
+                </div>
+              </section>
+
+              <section class="card dashboard-block">
+                <h3>Your bookings</h3>
+                <div class="grid grid-2">
+                  @for (booking of dash.bookings ?? []; track booking['id']) {
+                    <div class="quick-item">
+                      <div>
+                        <strong>{{ booking['service'] }}</strong>
+                        <div class="muted">{{ booking['provider'] }} - {{ booking['schedule'] }} - {{ booking['status'] }}</div>
+                      </div>
+                      @if (booking['status'] === 'pending') {
+                        <button class="btn danger" type="button" (click)="cancelBooking($any(booking['cancel_url']), $any(booking['id']))" [disabled]="dashboardActionKey('cancel-' + booking['id'])">Cancel</button>
+                      } @else if (booking['status'] === 'completed' && !booking['has_review']) {
+                        <form class="review-form" (ngSubmit)="submitReview($any(booking['review_url']), $any(booking['id']))">
+                          <input type="number" min="1" max="5" [name]="'rating_' + booking['id']" [(ngModel)]="$any(customerReview[$any(booking['id'])]).rating" required>
+                          <textarea [name]="'comment_' + booking['id']" [(ngModel)]="$any(customerReview[$any(booking['id'])]).comment" placeholder="Share your feedback" required></textarea>
+                          <button class="btn brand" type="submit" [disabled]="dashboardActionKey('review-' + booking['id'])">Submit review</button>
+                        </form>
+                      } @else {
+                        <span class="badge">No action</span>
+                      }
+                    </div>
+                  }
+                </div>
+              </section>
+            }
+          </div>
+        } @else {
+          <div class="flash error">{{ dashboardError() || 'Dashboard load nahi ho saka.' }}</div>
+        }
+      </div>
+    </main>
+  } @else if (isProviderProfilePage()) {
+    <main class="page">
+      <div class="container auth-shell">
+        @if (pageLoading()) {
+          <div class="loading-card card"><h2>Loading profile...</h2></div>
+        } @else {
+          <div class="auth-grid">
+            <div class="auth-showcase">
+              <span class="kicker">Provider Profile</span>
+              <h2>Apni profile ko professional banayein.</h2>
+              <p>Personal details, service area, availability, aur bio yahin update karein.</p>
+            </div>
+            <div class="auth-card">
+              <span class="badge">Edit profile</span>
+              <h1>Provider profile settings</h1>
+              @if (authError()) { <div class="flash error">{{ authError() }}</div> }
+              <form (ngSubmit)="submitProviderProfile()">
+                <div class="grid grid-2">
+                  <label>Full name<input type="text" name="name" [(ngModel)]="providerProfileForm.name" required></label>
+                  <label>Phone<input type="text" name="phone" [(ngModel)]="providerProfileForm.phone" required></label>
+                  <label>City<input type="text" name="city" [(ngModel)]="providerProfileForm.city" required></label>
+                  <label>Address<input type="text" name="address" [(ngModel)]="providerProfileForm.address" required></label>
+                  <label>Experience years<input type="number" name="experience_years" [(ngModel)]="providerProfileForm.experience_years" required></label>
+                  <label>Hourly rate<input type="number" name="hourly_rate" [(ngModel)]="providerProfileForm.hourly_rate" required></label>
+                  <label>Service area<input type="text" name="service_area" [(ngModel)]="providerProfileForm.service_area" required></label>
+                  <label>Availability<input type="text" name="availability" [(ngModel)]="providerProfileForm.availability" required></label>
+                </div>
+                <label>Bio<textarea name="bio" [(ngModel)]="providerProfileForm.bio" required></textarea></label>
+                <div class="stack-actions">
+                  <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : 'Save profile' }}</button>
+                  <a class="btn secondary" [href]="backendUrl('/dashboard')">Back to dashboard</a>
+                </div>
+              </form>
+            </div>
+          </div>
+        }
+      </div>
+    </main>
+  } @else if (isProviderServiceFormPage() || isAdminServiceEditPage()) {
+    <main class="page">
+      <div class="container auth-shell">
+        @if (pageLoading()) {
+          <div class="loading-card card"><h2>Loading service form...</h2></div>
+        } @else {
+          <div class="auth-grid service-form-shell">
+            <div class="auth-showcase">
+              <span class="kicker">{{ isAdminServiceEditPage() ? 'Admin Service Editor' : 'Service Form' }}</span>
+              <h2>{{ isAdminServiceEditPage() ? 'Provider service ko admin level par manage karein.' : 'Apni service details aur pricing update karein.' }}</h2>
+              <p>{{ isAdminServiceEditPage() ? 'Provider, category, pricing aur active status sab yahin se control hoga.' : 'Category, title, description, price, duration aur image yahin se manage karein.' }}</p>
+            </div>
+            <div class="auth-card">
+              <span class="badge">{{ isAdminServiceEditPage() ? 'Admin Edit' : (isProviderServiceCreatePage() ? 'Add service' : 'Edit service') }}</span>
+              <h1>{{ isAdminServiceEditPage() ? 'Service editor' : 'Service details' }}</h1>
+              @if (authError()) { <div class="flash error">{{ authError() }}</div> }
+              <form (ngSubmit)="submitServiceForm()">
+                <div class="grid grid-2">
+                  @if (isAdminServiceEditPage()) {
+                    <label>Provider
+                      <select name="provider_id" [(ngModel)]="serviceForm.provider_id" required>
+                        @for (provider of serviceFormData()?.providers ?? []; track provider.id) {
+                          <option [value]="provider.id">{{ provider.name }}</option>
+                        }
+                      </select>
+                    </label>
+                  }
+                  <label>Category
+                    <select name="category_id" [(ngModel)]="serviceForm.category_id" required>
+                      @for (category of serviceFormData()?.categories ?? []; track category.id) {
+                        <option [value]="category.id">{{ category.name }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label>Service title<input type="text" name="title" [(ngModel)]="serviceForm.title" required></label>
+                  <label>Short description<input type="text" name="short_description" [(ngModel)]="serviceForm.short_description" required></label>
+                  <label>Price<input type="number" name="price" [(ngModel)]="serviceForm.price" required></label>
+                  <label>Price type
+                    <select name="price_type" [(ngModel)]="serviceForm.price_type">
+                      <option value="fixed">Fixed</option>
+                      <option value="hourly">Hourly</option>
+                    </select>
+                  </label>
+                  <label>Duration minutes<input type="number" name="duration_minutes" [(ngModel)]="serviceForm.duration_minutes" required></label>
+                  @if (!isAdminServiceEditPage()) {
+                    <label>Service image<input type="file" name="image" accept="image/*" (change)="onServiceFileChange($event)"></label>
+                  }
+                  <label class="checkbox-row">
+                    <input type="checkbox" name="is_active" [(ngModel)]="serviceForm.is_active">
+                    Active service
+                  </label>
+                </div>
+                <label>Full description<textarea name="description" [(ngModel)]="serviceForm.description" required></textarea></label>
+                <div class="stack-actions">
+                  <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : 'Save changes' }}</button>
+                  <a class="btn secondary" [href]="backendUrl('/dashboard')">Back to dashboard</a>
+                </div>
+              </form>
+            </div>
+          </div>
+        }
+      </div>
+    </main>
+  } @else {
+    <main class="page">
+      <div class="container auth-shell">
+        <div class="auth-grid">
+          <div class="auth-showcase">
+            <span class="kicker">{{ isLoginPage() ? 'Login' : 'Register' }}</span>
+            <h2>{{ isLoginPage() ? 'Login karke apna dashboard instantly open karein.' : 'Customer ya provider account asani se create karein.' }}</h2>
+            <p>{{ isLoginPage() ? 'Admin approvals, provider service management, customer bookings, aur reviews sab ek hi workflow me available hain.' : 'Basic details fill karein. Provider role select karne par extra professional profile fields bhi yahin mil jayengi.' }}</p>
+
+            <div class="credentials-grid" style="margin-top:22px;">
+              <div class="credential">
+                <strong>Admin</strong>
+                <div>admin@homeservices.test</div>
+                <div>Password: password</div>
+              </div>
+              <div class="credential">
+                <strong>Customer</strong>
+                <div>customer@homeservices.test</div>
+                <div>Password: password</div>
+              </div>
+              <div class="credential">
+                <strong>Provider</strong>
+                <div>provider1@homeservices.test</div>
+                <div>Password: password</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="auth-card">
+            <span class="badge">{{ isLoginPage() ? 'Secure Login' : 'Registration' }}</span>
+            <h1>{{ isLoginPage() ? 'Welcome back' : 'Create your account' }}</h1>
+            <p class="muted">{{ isLoginPage() ? 'Apna email aur password enter karein.' : 'Customer ya provider account create karne ke liye neeche form fill karein.' }}</p>
+
+            @if (authError()) {
+              <div class="flash error">{{ authError() }}</div>
+            }
+
+            @if (isLoginPage()) {
+              <form (ngSubmit)="submitLogin()" style="margin-top:18px;">
+                <label>Email
+                  <input type="email" name="email" [(ngModel)]="loginForm.email" placeholder="Enter your email" required>
+                </label>
+                <label>Password
+                  <input type="password" name="password" [(ngModel)]="loginForm.password" placeholder="Enter your password" required>
+                </label>
+                <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : 'Login Now' }}</button>
+              </form>
+              <div class="notice" style="margin-top:18px;">
+                New here? <a [href]="backendUrl('/register')" style="color: var(--brand-strong); font-weight: 800;">Create account</a>
+              </div>
+            } @else {
+              <form (ngSubmit)="submitRegister()" style="margin-top:18px;">
+                <div class="grid grid-2">
+                  <label>Full name<input type="text" name="name" [(ngModel)]="registerForm.name" placeholder="Enter full name" required></label>
+                  <label>Email<input type="email" name="email" [(ngModel)]="registerForm.email" placeholder="Enter email" required></label>
+                  <label>Phone<input type="text" name="phone" [(ngModel)]="registerForm.phone" placeholder="03xx-xxxxxxx" required></label>
+                  <label>Role<select name="role" [(ngModel)]="registerForm.role"><option value="customer">Customer</option><option value="provider">Service Provider</option></select></label>
+                  <label>City<input type="text" name="city" [(ngModel)]="registerForm.city" placeholder="Karachi" required></label>
+                  <label>Address<input type="text" name="address" [(ngModel)]="registerForm.address" placeholder="Street, area, city" required></label>
+                  <label>Password<input type="password" name="password" [(ngModel)]="registerForm.password" placeholder="Create password" required></label>
+                  <label>Confirm password<input type="password" name="password_confirmation" [(ngModel)]="registerForm.password_confirmation" placeholder="Repeat password" required></label>
+                  <label>Service area<input type="text" name="service_area" [(ngModel)]="registerForm.service_area" placeholder="DHA, Gulshan, Clifton"></label>
+                  <label>Experience years<input type="number" name="experience_years" [(ngModel)]="registerForm.experience_years"></label>
+                  <label>Hourly rate<input type="number" name="hourly_rate" [(ngModel)]="registerForm.hourly_rate"></label>
+                  <label>Availability<input type="text" name="availability" [(ngModel)]="registerForm.availability" placeholder="Mon-Sat, 10 AM - 7 PM"></label>
+                </div>
+                <label>Provider bio
+                  <textarea name="bio" [(ngModel)]="registerForm.bio" placeholder="Tell users about your experience and working style"></textarea>
+                </label>
+                <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : 'Create account' }}</button>
+              </form>
+            }
+          </div>
+        </div>
+      </div>
+    </main>
+  }
+</div>
+
+<ng-template #loadingBlock>
+  <div class="loading-shell">
+    <div class="loading-card card">
+      <h2>{{ t('loading') }}</h2>
+      <p>{{ error() || t('loadingText') }}</p>
+    </div>
+  </div>
+</ng-template>
