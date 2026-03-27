@@ -34,6 +34,7 @@ Route::get('/services/{slug}', fn () => serveSpaResponse())->name('services.show
 Route::get('/services/{slug}/data', [SpaPageController::class, 'serviceShow'])->name('services.show.data');
 Route::get('/providers/{provider}', fn () => serveSpaResponse())->name('providers.show');
 Route::get('/providers/{provider}/data', [SpaPageController::class, 'providerShow'])->name('providers.show.data');
+Route::get('/auth/state', [AuthController::class, 'state'])->name('auth.state');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', fn () => serveSpaResponse())->name('login');

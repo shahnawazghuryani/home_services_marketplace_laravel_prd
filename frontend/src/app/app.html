@@ -13,8 +13,14 @@
         <div class="nav-links">
           <a [href]="backendUrl('/services')">{{ t('servicesNav') }}</a>
           <a [href]="homeUrl('#providers')">{{ t('providersNav') }}</a>
-          @if (isDashboardPage()) {
-            <a class="btn secondary nav-login" [href]="backendUrl('/dashboard')">Dashboard</a>
+          <a [href]="backendUrl('/dashboard')">Dashboard</a>
+          @if (showProviderNav()) {
+            <a [href]="backendUrl('/provider/profile/edit')">Provider</a>
+          }
+        </div>
+
+        <div class="nav-links nav-auth-links">
+          @if (isAuthenticatedUiState()) {
             <button type="button" class="btn brand nav-login" (click)="logout()">Logout</button>
           } @else {
           @if (!isLoginPage()) {
@@ -55,6 +61,9 @@
             <div class="search-shell services-search-shell">
               <div class="search-panel listing-search-panel">
                 <h3>{{ t('searchTitle') }}</h3>
+                @if (authError()) {
+                  <div class="flash error">{{ authError() }}</div>
+                }
 
                 <div class="hero-search-grid">
                   <label>
@@ -87,6 +96,26 @@
                   <div class="search-submit">
                     <button type="button" class="btn brand" (click)="submitServiceSearch()">{{ t('search') }}</button>
                   </div>
+                </div>
+
+                <div class="notice" style="margin-top:14px;">
+                  <strong>AI Search Helper</strong>
+                  <label style="margin-top:12px;">Apni problem simple alfaaz mein likhein
+                    <textarea name="ai_problem_home" [(ngModel)]="aiSearchForm.problem" placeholder="Jaise: mere AC se pani tapak raha hai aur cooling kam hai"></textarea>
+                  </label>
+                  <div class="stack-actions">
+                    <button type="button" class="btn secondary" (click)="runAiSmartSearch()" [disabled]="aiSearchLoading()">{{ aiSearchLoading() ? 'Thinking...' : 'Suggest with AI' }}</button>
+                  </div>
+                  @if (aiSearchResult(); as ai) {
+                    <div class="notice" style="margin-top:12px;">
+                      <strong>{{ ai.summary }}</strong>
+                      <div>Suggested query: {{ ai.search_query }}</div>
+                      <div>Urgency: {{ ai.urgency }}</div>
+                      @if (ai.follow_up_questions?.length) {
+                        <div style="margin-top:8px;">Follow-up: {{ ai.follow_up_questions?.join(' | ') }}</div>
+                      }
+                    </div>
+                  }
                 </div>
               </div>
 
@@ -186,6 +215,9 @@
             <div class="search-shell services-search-shell">
               <div class="search-panel listing-search-panel">
                 <h3>{{ t('searchTitle') }}</h3>
+                @if (authError()) {
+                  <div class="flash error">{{ authError() }}</div>
+                }
 
                 <div class="hero-search-grid">
                   <label>
@@ -219,6 +251,26 @@
                     <button type="button" class="btn brand" (click)="submitServiceSearch()">{{ t('search') }}</button>
                   </div>
                 </div>
+
+                <div class="notice" style="margin-top:14px;">
+                  <strong>AI Search Helper</strong>
+                  <label style="margin-top:12px;">Apni problem simple alfaaz mein likhein
+                    <textarea name="ai_problem_services" [(ngModel)]="aiSearchForm.problem" placeholder="Jaise: sink leakage hai aur pani niche gir raha hai"></textarea>
+                  </label>
+                  <div class="stack-actions">
+                    <button type="button" class="btn secondary" (click)="runAiSmartSearch()" [disabled]="aiSearchLoading()">{{ aiSearchLoading() ? 'Thinking...' : 'Suggest with AI' }}</button>
+                  </div>
+                  @if (aiSearchResult(); as ai) {
+                    <div class="notice" style="margin-top:12px;">
+                      <strong>{{ ai.summary }}</strong>
+                      <div>Suggested query: {{ ai.search_query }}</div>
+                      <div>Urgency: {{ ai.urgency }}</div>
+                      @if (ai.follow_up_questions?.length) {
+                        <div style="margin-top:8px;">Follow-up: {{ ai.follow_up_questions?.join(' | ') }}</div>
+                      }
+                    </div>
+                  }
+                </div>
               </div>
 
               <div class="side-stack">
@@ -251,8 +303,8 @@
                   <div class="service-card-body">
                     <span class="badge">{{ service.category }}</span>
                     <h3>{{ service.title }}</h3>
-                    <p>{{ service.short_description }}</p>
-                    <div class="notice">{{ service.provider.service_area }} - {{ service.provider.city }} - {{ service.duration_minutes }} {{ t('mins') }}</div>
+                    <p class="service-summary">{{ service.short_description }}</p>
+                    <div class="service-meta">{{ service.provider.city }} - {{ service.duration_minutes }} {{ t('mins') }}</div>
                     <div class="provider-strip">
                       <a class="avatar-pill" [href]="backendUrl('/providers/' + service.provider.id)">{{ service.provider.name }}</a>
                       <span class="price">PKR {{ service.price | number:'1.0-0' }}</span>
@@ -283,35 +335,53 @@
           <div class="loading-card card"><h2>Loading service details...</h2></div>
         } @else if (serviceDetailData(); as detail) {
           <div class="detail-grid">
-            <div class="detail-panel">
+            <div class="card detail-panel">
               @if (detail.service.image_url) {
                 <img class="detail-cover" [src]="detail.service.image_url" [alt]="detail.service.title">
               } @else {
                 <div class="detail-cover"></div>
               }
               <span class="badge">{{ detail.service.category }}</span>
-              <h1 style="margin-bottom:10px;">{{ detail.service.title }}</h1>
-              <p class="muted" style="font-size:1.04rem;">{{ detail.service.short_description }}</p>
+              <h1 class="detail-title">{{ detail.service.title }}</h1>
+              <p class="muted detail-summary">{{ detail.service.short_description }}</p>
               <div class="detail-meta">
                 <div class="meta-box"><strong>Price</strong><div>PKR {{ detail.service.price | number:'1.0-0' }}</div></div>
                 <div class="meta-box"><strong>Duration</strong><div>{{ detail.service.duration_minutes }} minutes</div></div>
                 <div class="meta-box"><strong>Provider</strong><div>{{ detail.service.provider.name }}</div></div>
               </div>
               <div class="notice">{{ detail.service.description }}</div>
-              <div class="notice" style="margin-top:16px;">Service area: {{ detail.provider_location_label }}</div>
-              <div class="notice" style="margin-top:16px;">
+              <div class="notice detail-note">Service area: {{ detail.provider_location_label }}</div>
+              <div class="notice detail-note">
                 <strong>Phone</strong>
                 <div>{{ detail.service.provider.phone }}</div>
               </div>
-              <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;">
+              <div class="detail-actions">
                 @if (detail.auth.can_book) {
-                  <a class="btn brand" [href]="backendUrl('/services/' + detail.service.slug + '/book')">Book this service</a>
+                  <button type="button" class="btn brand" (click)="goToBooking(detail.service.slug)">Book this service</button>
                 } @else if (!detail.auth.logged_in) {
-                  <a class="btn brand" [href]="backendUrl('/login')">Login to book</a>
+                  <button type="button" class="btn brand" (click)="goToLoginToBook(detail.service.slug)">Login to book</button>
                 }
                 <a class="btn secondary" [href]="'tel:' + formatPhone(detail.service.provider.phone)">Call provider</a>
                 <a class="btn brand" [href]="'https://wa.me/' + formatPhone(detail.service.provider.phone)" target="_blank" rel="noopener">WhatsApp</a>
                 <a class="btn secondary" [href]="backendUrl('/providers/' + detail.service.provider.id)">View provider</a>
+              </div>
+              <div class="notice detail-note">
+                <strong>AI Provider Match</strong>
+                <p class="detail-ai-copy">AI isi problem ke liye alternative providers recommend kar sakta hai.</p>
+                <div class="stack-actions">
+                  <button type="button" class="btn secondary" (click)="runAiProviderRecommendations()" [disabled]="aiProviderLoading()">{{ aiProviderLoading() ? 'Finding...' : 'Get AI Recommendations' }}</button>
+                </div>
+                @if (aiProviderResult(); as providerAi) {
+                  <div class="notice detail-ai-result">
+                    <strong>{{ providerAi.summary }}</strong>
+                    @for (provider of providerAi.providers; track provider.id) {
+                      <div class="detail-ai-provider">
+                        <a [href]="backendUrl('/providers/' + provider.id)">{{ provider.name }}</a> - {{ provider.city }} - {{ provider.service_area }} - PKR {{ provider.hourly_rate | number:'1.0-0' }}/hr
+                        <div class="muted">{{ provider.reason }}</div>
+                      </div>
+                    }
+                  </div>
+                }
               </div>
             </div>
             <div class="card map-card">
@@ -406,6 +476,26 @@
               <h1>Schedule service</h1>
               <p class="muted">Correct date, address, aur payment method select karein taa ke provider ko clear booking request mile.</p>
               @if (authError()) { <div class="flash error">{{ authError() }}</div> }
+              <div class="notice" style="margin-bottom:16px;">
+                <strong>AI Booking Helper</strong>
+                <p style="margin:10px 0 0;">Agar notes unclear hain to AI provider-friendly summary bana dega.</p>
+                <div class="stack-actions">
+                  <button type="button" class="btn secondary" (click)="runAiBookingHelper()" [disabled]="aiBookingLoading()">{{ aiBookingLoading() ? 'Thinking...' : 'Improve with AI' }}</button>
+                </div>
+                @if (aiBookingResult(); as bookingAi) {
+                  <div class="notice" style="margin-top:12px;">
+                    <strong>Suggested summary</strong>
+                    <div>{{ bookingAi.customer_summary }}</div>
+                    <div style="margin-top:8px;">Tip: {{ bookingAi.booking_tip }}</div>
+                    @if (bookingAi.missing_fields.length) {
+                      <div style="margin-top:8px;">Missing: {{ bookingAi.missing_fields.join(', ') }}</div>
+                    }
+                    @if (bookingAi.risk_flags.length) {
+                      <div style="margin-top:8px;">Flags: {{ bookingAi.risk_flags.join(' | ') }}</div>
+                    }
+                  </div>
+                }
+              </div>
               <form (ngSubmit)="submitBooking()">
                 <div class="form-section">
                   <div class="form-section-title">Appointment details</div>

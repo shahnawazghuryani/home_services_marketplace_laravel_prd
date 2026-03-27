@@ -71,6 +71,11 @@ interface AuthResponse {
   redirect: string;
 }
 
+interface AuthStateResponse {
+  logged_in: boolean;
+  role: string | null;
+}
+
 interface DashboardListItem {
   label?: string;
   total?: number;
@@ -243,6 +248,39 @@ interface BookingCreateResponse {
   payment_methods: string[];
 }
 
+interface AiSmartSearchResponse {
+  search_query: string;
+  category_slug: string | null;
+  urgency: 'low' | 'medium' | 'high';
+  summary: string;
+  filters?: {
+    location?: string | null;
+  };
+  follow_up_questions?: string[];
+}
+
+interface AiBookingHelperResponse {
+  customer_summary: string;
+  missing_fields: string[];
+  booking_tip: string;
+  risk_flags: string[];
+}
+
+interface AiRecommendedProvider {
+  id: number;
+  name: string;
+  phone: string;
+  city: string;
+  service_area: string;
+  hourly_rate: number;
+  reason: string;
+}
+
+interface AiProviderRecommendationsResponse {
+  summary: string;
+  providers: AiRecommendedProvider[];
+}
+
 type LocaleKey = 'en' | 'ur' | 'sd';
 type CopyMap = Record<LocaleKey, Record<string, string>>;
 
@@ -390,10 +428,18 @@ export class App {
   readonly serviceDetailData = signal<ServiceDetailResponse | null>(null);
   readonly providerDetailData = signal<ProviderDetailResponse | null>(null);
   readonly bookingCreateData = signal<BookingCreateResponse | null>(null);
+  readonly aiSearchLoading = signal(false);
+  readonly aiSearchResult = signal<AiSmartSearchResponse | null>(null);
+  readonly aiBookingLoading = signal(false);
+  readonly aiBookingResult = signal<AiBookingHelperResponse | null>(null);
+  readonly aiProviderLoading = signal(false);
+  readonly aiProviderResult = signal<AiProviderRecommendationsResponse | null>(null);
+  readonly authState = signal<AuthStateResponse>({ logged_in: false, role: null });
 
   loginForm = {
     email: '',
     password: '',
+    redirect_to: '',
   };
 
   registerForm = {
@@ -410,6 +456,7 @@ export class App {
     hourly_rate: 0,
     availability: '',
     bio: '',
+    redirect_to: '',
   };
 
   providerProfileForm = {
@@ -452,10 +499,15 @@ export class App {
     notes: '',
     payment_method: 'Cash on Service',
   };
+  aiSearchForm = {
+    problem: '',
+  };
 
   constructor() {
     const storedLocale = this.readStoredLocale();
     this.applyLocale(storedLocale);
+    this.hydrateAuthRedirect();
+    this.loadAuthState();
 
     if (this.isHomePage()) {
       this.hydrateFiltersFromQuery();
@@ -540,8 +592,49 @@ export class App {
     return /^\/admin\/services\/\d+\/edit$/.test(this.currentPath());
   }
 
+  isAuthenticatedUiState(): boolean {
+    return this.authState().logged_in
+      || this.isDashboardPage()
+      || this.isProviderProfilePage()
+      || this.isProviderServiceFormPage()
+      || this.isAdminServiceEditPage()
+      || this.isBookingCreatePage()
+      || !!this.serviceDetailData()?.auth?.logged_in;
+  }
+
+  showProviderNav(): boolean {
+    return this.authState().role === 'provider'
+      || this.isProviderProfilePage()
+      || this.isProviderServiceFormPage()
+      || this.dashboard()?.role === 'provider';
+  }
+
   homeUrl(fragment = ''): string {
     return this.backendUrl('/' + fragment);
+  }
+
+  loginUrl(redirectTo?: string): string {
+    if (!redirectTo) {
+      return this.backendUrl('/login');
+    }
+
+    return this.backendUrl(`/login?redirect=${encodeURIComponent(redirectTo)}`);
+  }
+
+  goToLoginToBook(slug: string): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.location.assign(this.loginUrl(`/services/${slug}/book`));
+  }
+
+  goToBooking(slug: string): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.location.assign(this.backendUrl(`/services/${slug}/book`));
   }
 
   load(): void {
@@ -659,6 +752,36 @@ export class App {
 
     this.navigateWithFilters('/');
     this.load();
+  }
+
+  runAiSmartSearch(): void {
+    if (!this.aiSearchForm.problem.trim()) {
+      this.authError.set('Pehle apni problem likhein, phir AI helper use karein.');
+      return;
+    }
+
+    this.aiSearchLoading.set(true);
+    this.authError.set('');
+
+    this.http.post<{ data: AiSmartSearchResponse }>(this.backendUrl('/api/ai/smart-search'), {
+      problem: this.aiSearchForm.problem.trim(),
+      location: this.location().trim() || null,
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          const data = response.data;
+          this.aiSearchResult.set(data);
+          this.search.set(data.search_query ?? this.search());
+          this.category.set(data.category_slug ?? '');
+          this.location.set(data.filters?.location ?? this.location());
+          this.currentLocationText.set(data.summary || this.currentLocationText());
+          this.aiSearchLoading.set(false);
+        },
+        error: (error) => {
+          this.aiSearchLoading.set(false);
+          this.authError.set(error?.error?.message ?? 'AI search helper temporarily unavailable hai. Please dobara try karein.');
+        }
+      });
   }
 
   onServiceFileChange(event: Event): void {
@@ -893,6 +1016,67 @@ export class App {
       });
   }
 
+  runAiBookingHelper(): void {
+    const bookingPage = this.bookingCreateData();
+
+    if (!bookingPage) {
+      return;
+    }
+
+    this.aiBookingLoading.set(true);
+    this.authError.set('');
+
+    this.http.post<{ data: AiBookingHelperResponse }>(this.backendUrl('/api/ai/booking-helper'), {
+      service_title: bookingPage.service.title,
+      problem: this.bookingForm.notes.trim() || bookingPage.service.short_description,
+      location: this.bookingForm.address.trim(),
+      preferred_time: this.bookingForm.scheduled_at,
+      budget: String(bookingPage.service.price),
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          const data = response.data;
+          this.aiBookingResult.set(data);
+          if (data.customer_summary) {
+            this.bookingForm.notes = data.customer_summary;
+          }
+          this.aiBookingLoading.set(false);
+        },
+        error: (error) => {
+          this.aiBookingLoading.set(false);
+          this.authError.set(error?.error?.message ?? 'AI booking helper temporarily unavailable hai. Please dobara try karein.');
+        }
+      });
+  }
+
+  runAiProviderRecommendations(): void {
+    const detail = this.serviceDetailData();
+
+    if (!detail) {
+      return;
+    }
+
+    this.aiProviderLoading.set(true);
+    this.authError.set('');
+
+    this.http.post<{ data: AiProviderRecommendationsResponse }>(this.backendUrl('/api/ai/provider-recommendations'), {
+      problem: detail.service.short_description,
+      location: detail.service.provider.city,
+      category_slug: this.slugify(detail.service.category),
+      budget: detail.service.price,
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.aiProviderResult.set(response.data);
+          this.aiProviderLoading.set(false);
+        },
+        error: (error) => {
+          this.aiProviderLoading.set(false);
+          this.authError.set(error?.error?.message ?? 'AI recommendations temporarily unavailable hain. Please dobara try karein.');
+        }
+      });
+  }
+
   submitServiceForm(): void {
     this.authLoading.set(true);
     this.authError.set('');
@@ -1004,6 +1188,26 @@ export class App {
     this.category.set(params.get('category') ?? '');
   }
 
+  private hydrateAuthRedirect(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect') ?? '';
+
+    this.loginForm.redirect_to = redirect;
+    this.registerForm.redirect_to = redirect;
+  }
+
+  private slugify(value: string): string {
+    return value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
   private detectBackendOrigin(): string {
     if (typeof window === 'undefined') {
       return '';
@@ -1014,6 +1218,16 @@ export class App {
     }
 
     return window.location.origin;
+  }
+
+  private loadAuthState(): void {
+    this.http.get<AuthStateResponse>(this.backendUrl('/auth/state'), {
+      headers: this.authHeaders(),
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => this.authState.set(response),
+        error: () => this.authState.set({ logged_in: false, role: null }),
+      });
   }
 
   private loadProviderProfilePage(): void {

@@ -54,6 +54,37 @@ In order to ensure that the Laravel community is welcoming to all, please review
 
 If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
+## OpenAI Integration
+
+This project includes a reusable OpenAI integration structure for marketplace UX improvements.
+
+Setup:
+
+- Add `OPENAI_API_KEY` in your `.env`
+- Optional: change `OPENAI_MODEL`, `OPENAI_TIMEOUT`, or AI feature flags
+- Clear config cache with `php artisan config:clear`
+
+Available API endpoints:
+
+- `POST /api/ai/smart-search`
+- `POST /api/ai/booking-helper`
+- `POST /api/ai/provider-recommendations`
+
+Example request:
+
+```json
+{
+  "problem": "Mere AC se pani tapak raha hai aur cooling bhi kam hai",
+  "location": "Karachi DHA"
+}
+```
+
+These endpoints are backed by:
+
+- `app/Services/AI/OpenAIResponsesClient.php`
+- `app/Services/AI/MarketplaceAiService.php`
+- `app/Http/Controllers/AiController.php`
+
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

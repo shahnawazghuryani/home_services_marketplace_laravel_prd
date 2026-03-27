@@ -18,12 +18,26 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
+    public function state(Request $request): JsonResponse
+    {
+        return response()->json([
+            'logged_in' => (bool) $request->user(),
+            'role' => $request->user()?->role,
+        ]);
+    }
+
     public function login(Request $request): RedirectResponse|JsonResponse
     {
-        $credentials = $request->validate([
+        $validated = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
+            'redirect_to' => ['nullable', 'string', 'max:500'],
         ]);
+
+        $credentials = [
+            'email' => $validated['email'],
+            'password' => $validated['password'],
+        ];
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             if ($request->expectsJson()) {
@@ -40,14 +54,16 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        $redirectTo = $this->safeRedirect($request->input('redirect_to'));
+
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => 'Logged in successfully.',
-                'redirect' => route('dashboard'),
+                'redirect' => $redirectTo ?? route('dashboard'),
             ]);
         }
 
-        return redirect()->route('dashboard');
+        return redirect()->to($redirectTo ?? route('dashboard'));
     }
 
     public function showRegister()
@@ -70,6 +86,7 @@ class AuthController extends Controller
             'hourly_rate' => ['nullable', 'numeric', 'min:0'],
             'service_area' => ['nullable', 'string', 'max:255'],
             'availability' => ['nullable', 'string', 'max:255'],
+            'redirect_to' => ['nullable', 'string', 'max:500'],
         ]);
 
         $user = User::create([
@@ -99,14 +116,16 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        $redirectTo = $this->safeRedirect($request->input('redirect_to'));
+
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => 'Your account has been created successfully.',
-                'redirect' => route('dashboard'),
+                'redirect' => $redirectTo ?? route('dashboard'),
             ]);
         }
 
-        return redirect()->route('dashboard')->with('success', 'Your account has been created successfully.');
+        return redirect()->to($redirectTo ?? route('dashboard'))->with('success', 'Your account has been created successfully.');
     }
 
     public function logout(Request $request): RedirectResponse|JsonResponse
@@ -123,5 +142,22 @@ class AuthController extends Controller
         }
 
         return redirect()->route('home');
+    }
+
+    private function safeRedirect(?string $redirectTo): ?string
+    {
+        if (! $redirectTo) {
+            return null;
+        }
+
+        if (! str_starts_with($redirectTo, '/')) {
+            return null;
+        }
+
+        if (str_starts_with($redirectTo, '//')) {
+            return null;
+        }
+
+        return $redirectTo;
     }
 }
