@@ -98,25 +98,6 @@
                   </div>
                 </div>
 
-                <div class="notice" style="margin-top:14px;">
-                  <strong>AI Search Helper</strong>
-                  <label style="margin-top:12px;">Apni problem simple alfaaz mein likhein
-                    <textarea name="ai_problem_home" [(ngModel)]="aiSearchForm.problem" placeholder="Jaise: mere AC se pani tapak raha hai aur cooling kam hai"></textarea>
-                  </label>
-                  <div class="stack-actions">
-                    <button type="button" class="btn secondary" (click)="runAiSmartSearch()" [disabled]="aiSearchLoading()">{{ aiSearchLoading() ? 'Thinking...' : 'Suggest with AI' }}</button>
-                  </div>
-                  @if (aiSearchResult(); as ai) {
-                    <div class="notice" style="margin-top:12px;">
-                      <strong>{{ ai.summary }}</strong>
-                      <div>Suggested query: {{ ai.search_query }}</div>
-                      <div>Urgency: {{ ai.urgency }}</div>
-                      @if (ai.follow_up_questions?.length) {
-                        <div style="margin-top:8px;">Follow-up: {{ ai.follow_up_questions?.join(' | ') }}</div>
-                      }
-                    </div>
-                  }
-                </div>
               </div>
 
               <div class="side-stack">
@@ -252,25 +233,6 @@
                   </div>
                 </div>
 
-                <div class="notice" style="margin-top:14px;">
-                  <strong>AI Search Helper</strong>
-                  <label style="margin-top:12px;">Apni problem simple alfaaz mein likhein
-                    <textarea name="ai_problem_services" [(ngModel)]="aiSearchForm.problem" placeholder="Jaise: sink leakage hai aur pani niche gir raha hai"></textarea>
-                  </label>
-                  <div class="stack-actions">
-                    <button type="button" class="btn secondary" (click)="runAiSmartSearch()" [disabled]="aiSearchLoading()">{{ aiSearchLoading() ? 'Thinking...' : 'Suggest with AI' }}</button>
-                  </div>
-                  @if (aiSearchResult(); as ai) {
-                    <div class="notice" style="margin-top:12px;">
-                      <strong>{{ ai.summary }}</strong>
-                      <div>Suggested query: {{ ai.search_query }}</div>
-                      <div>Urgency: {{ ai.urgency }}</div>
-                      @if (ai.follow_up_questions?.length) {
-                        <div style="margin-top:8px;">Follow-up: {{ ai.follow_up_questions?.join(' | ') }}</div>
-                      }
-                    </div>
-                  }
-                </div>
               </div>
 
               <div class="side-stack">
@@ -373,11 +335,17 @@
                 </div>
                 @if (aiProviderResult(); as providerAi) {
                   <div class="notice detail-ai-result">
-                    <strong>{{ providerAi.summary }}</strong>
+                    <strong>Aap ke liye yeh providers match huay hain:</strong>
+                    <p class="detail-ai-copy">{{ providerAi.summary }}</p>
                     @for (provider of providerAi.providers; track provider.id) {
                       <div class="detail-ai-provider">
                         <a [href]="backendUrl('/providers/' + provider.id)">{{ provider.name }}</a> - {{ provider.city }} - {{ provider.service_area }} - PKR {{ provider.hourly_rate | number:'1.0-0' }}/hr
+                        <div><strong>Phone:</strong> {{ provider.phone }}</div>
                         <div class="muted">{{ provider.reason }}</div>
+                        <div class="stack-actions">
+                          <a class="btn secondary" [href]="'tel:' + formatPhone(provider.phone)">Call now</a>
+                          <a class="btn brand" [href]="'https://wa.me/' + formatPhone(provider.phone)" target="_blank" rel="noopener">WhatsApp</a>
+                        </div>
                       </div>
                     }
                   </div>

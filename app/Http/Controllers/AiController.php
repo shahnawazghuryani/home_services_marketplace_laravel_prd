@@ -15,22 +15,6 @@ class AiController extends Controller
     ) {
     }
 
-    public function smartSearch(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'problem' => ['required', 'string', 'max:1000'],
-            'location' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        try {
-            return response()->json([
-                'data' => $this->ai->smartSearch($data['problem'], $data['location'] ?? null),
-            ]);
-        } catch (RuntimeException $exception) {
-            return $this->errorResponse($exception);
-        }
-    }
-
     public function bookingHelper(Request $request): JsonResponse
     {
         $data = $request->validate([

@@ -2,7 +2,6 @@
 
 namespace App\Services\AI;
 
-use App\Models\Category;
 use RuntimeException;
 
 class MarketplaceAiService
@@ -10,60 +9,6 @@ class MarketplaceAiService
     public function __construct(
         private readonly OpenAIResponsesClient $client,
     ) {
-    }
-
-    public function smartSearch(string $problem, ?string $location = null): array
-    {
-        $this->ensureFeatureEnabled('smart_search');
-
-        $categories = Category::query()
-            ->orderBy('name')
-            ->get(['name', 'slug'])
-            ->map(fn (Category $category) => [
-                'name' => $category->name,
-                'slug' => $category->slug,
-            ])
-            ->values()
-            ->all();
-
-        $prompt = <<<TEXT
-You are helping users search home services in Pakistan.
-Return JSON only with this shape:
-{
-  "search_query": "short search phrase",
-  "category_slug": "best matched category slug or null",
-  "urgency": "low|medium|high",
-  "summary": "short plain-language summary",
-  "filters": {
-    "location": "location or null"
-  },
-  "follow_up_questions": ["question 1", "question 2"]
-}
-
-Available categories:
-%s
-
-User problem: %s
-User location: %s
-TEXT;
-
-        try {
-            return $this->client->json([
-                $this->systemMessage('You convert messy user problem statements into structured marketplace search help.'),
-                $this->userMessage(sprintf(
-                    $prompt,
-                    json_encode($categories, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                    $problem,
-                    $location ?: 'not provided'
-                )),
-            ], (float) config('ai.features.smart_search.temperature'));
-        } catch (RuntimeException $exception) {
-            if (! $this->fallbackEnabled()) {
-                throw $exception;
-            }
-
-            return $this->fallbackSmartSearch($problem, $location, $categories);
-        }
     }
 
     /**
@@ -186,64 +131,6 @@ TEXT;
     }
 
     /**
-     * @param  array<int, array{name: string, slug: string}>  $categories
-     * @return array<string, mixed>
-     */
-    private function fallbackSmartSearch(string $problem, ?string $location, array $categories): array
-    {
-        $problemLower = strtolower($problem);
-        $words = preg_split('/[^a-z0-9]+/i', $problemLower) ?: [];
-        $words = array_values(array_filter($words, fn ($word) => strlen((string) $word) >= 3));
-
-        $categoryHints = [
-            'plumbing' => ['plumber', 'plumbing', 'pipe', 'tap', 'leak', 'bathroom', 'drain', 'sewer', 'naali', 'nalka'],
-            'electric' => ['electric', 'electrician', 'wiring', 'switch', 'socket', 'short', 'spark', 'fan', 'light', 'bulb'],
-            'ac' => ['ac', 'aircondition', 'cooling', 'compressor', 'indoor', 'outdoor'],
-            'cleaning' => ['clean', 'cleaning', 'sofa', 'carpet', 'deep clean', 'wash'],
-            'painting' => ['paint', 'painter', 'wall', 'color', 'polish'],
-            'carpentry' => ['carpenter', 'wood', 'door', 'cabinet', 'furniture'],
-        ];
-
-        $bestSlug = $this->pickCategoryByHints($problemLower, $categories, $categoryHints);
-        foreach ($categories as $category) {
-            if ($bestSlug !== null) {
-                break;
-            }
-
-            $name = strtolower((string) ($category['name'] ?? ''));
-            $slug = strtolower((string) ($category['slug'] ?? ''));
-
-            foreach ($words as $word) {
-                if ($word !== '' && (str_contains($name, $word) || str_contains($slug, $word) || str_contains($problemLower, $slug))) {
-                    $bestSlug = $category['slug'];
-                    break 2;
-                }
-            }
-        }
-
-        $urgency = 'medium';
-        if ($this->containsAny($problemLower, ['urgent', 'emergency', 'jaldi', 'immediately', 'leak', 'spark', 'smoke', 'gas'])) {
-            $urgency = 'high';
-        } elseif ($this->containsAny($problemLower, ['routine', 'later', 'weekend', 'maintenance'])) {
-            $urgency = 'low';
-        }
-
-        $searchQuery = $this->buildSearchQuery($problem, $bestSlug);
-        $followUps = $this->buildFollowUpQuestions($bestSlug);
-
-        return [
-            'search_query' => $searchQuery,
-            'category_slug' => $bestSlug,
-            'urgency' => $urgency,
-            'summary' => 'Smart local helper ne aapki request ko structured search me convert kar diya hai.',
-            'filters' => [
-                'location' => $location ?: null,
-            ],
-            'follow_up_questions' => $followUps,
-        ];
-    }
-
-    /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
@@ -350,77 +237,4 @@ TEXT;
         return false;
     }
 
-    /**
-     * @param array<int, array{name: string, slug: string}> $categories
-     * @param array<string, array<int, string>> $categoryHints
-     */
-    private function pickCategoryByHints(string $problemLower, array $categories, array $categoryHints): ?string
-    {
-        foreach ($categories as $category) {
-            $slug = strtolower((string) ($category['slug'] ?? ''));
-            $name = strtolower((string) ($category['name'] ?? ''));
-
-            foreach ($categoryHints as $hintGroup => $keywords) {
-                if (! str_contains($slug, $hintGroup) && ! str_contains($name, $hintGroup)) {
-                    continue;
-                }
-
-                if ($this->containsAny($problemLower, $keywords)) {
-                    return $category['slug'];
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private function buildSearchQuery(string $problem, ?string $bestSlug): string
-    {
-        if ($bestSlug !== null) {
-            $prefix = str_replace(['-', '_'], ' ', trim($bestSlug));
-
-            return trim($prefix . ' service near me');
-        }
-
-        $clean = trim(preg_replace('/\s+/', ' ', $problem) ?: '');
-        if ($clean === '') {
-            return 'home service near me';
-        }
-
-        return mb_substr($clean, 0, 80);
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function buildFollowUpQuestions(?string $bestSlug): array
-    {
-        $slug = strtolower((string) $bestSlug);
-
-        if (str_contains($slug, 'plumb')) {
-            return [
-                'Leak kis jagah se hai (kitchen, bathroom, ya main line)?',
-                'Pani band karna possible hai ya emergency visit chahiye?',
-            ];
-        }
-
-        if (str_contains($slug, 'elect')) {
-            return [
-                'Issue ek point par hai ya poore ghar me?',
-                'Spark/smell aa rahi ho to breaker off karke details share karein?',
-            ];
-        }
-
-        if (str_contains($slug, 'ac')) {
-            return [
-                'AC model aur last service kab hui thi?',
-                'Cooling issue ke sath noise ya water leakage bhi hai?',
-            ];
-        }
-
-        return [
-            'Issue kab se aa raha hai aur kitni dafa hota hai?',
-            'Koi photo/video share kar sakte hain taake provider better estimate de sake?',
-        ];
-    }
 }

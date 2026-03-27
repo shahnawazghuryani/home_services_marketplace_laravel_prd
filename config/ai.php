@@ -4,10 +4,6 @@ return [
     'fallback_enabled' => env('AI_FALLBACK_ENABLED', env('APP_ENV') !== 'production'),
 
     'features' => [
-        'smart_search' => [
-            'enabled' => env('AI_SMART_SEARCH_ENABLED', true),
-            'temperature' => (float) env('AI_SMART_SEARCH_TEMPERATURE', 0.2),
-        ],
         'booking_helper' => [
             'enabled' => env('AI_BOOKING_HELPER_ENABLED', true),
             'temperature' => (float) env('AI_BOOKING_HELPER_TEMPERATURE', 0.3),

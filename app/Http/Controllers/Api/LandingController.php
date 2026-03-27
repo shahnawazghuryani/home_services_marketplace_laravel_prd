@@ -13,20 +13,21 @@ class LandingController extends Controller
 {
     public function index(Request $request)
     {
+        $search = trim((string) $request->string('search'));
+        $requestedCategory = trim((string) $request->string('category'));
+        $searchContext = $this->buildSearchContext($search);
+        $effectiveCategory = $requestedCategory !== '' ? $requestedCategory : ($searchContext['inferred_category'] ?? '');
+        $searchTokens = $searchContext['tokens'] ?? [];
+
         $servicesQuery = Service::with(['category', 'provider.user'])
             ->where('is_active', true);
 
-        if ($request->filled('category')) {
-            $servicesQuery->whereHas('category', fn ($query) => $query->where('slug', $request->string('category')));
+        if ($effectiveCategory !== '') {
+            $servicesQuery->whereHas('category', fn ($query) => $query->where('slug', $effectiveCategory));
         }
 
-        if ($request->filled('search')) {
-            $search = $request->string('search')->toString();
-            $servicesQuery->where(function ($query) use ($search) {
-                $query->where('title', 'like', "%{$search}%")
-                    ->orWhere('short_description', 'like', "%{$search}%")
-                    ->orWhereHas('provider.user', fn ($providerQuery) => $providerQuery->where('name', 'like', "%{$search}%"));
-            });
+        if ($searchTokens !== []) {
+            $servicesQuery->where(fn ($query) => $this->applyServiceSearchTokens($query, $searchTokens));
         }
 
         if ($request->filled('location')) {
@@ -40,7 +41,18 @@ class LandingController extends Controller
         }
 
         $providersQuery = Provider::with(['user'])
-            ->whereNotNull('approved_at');
+            ->whereNotNull('approved_at')
+            ->whereHas('services', fn ($serviceQuery) => $serviceQuery->where('is_active', true));
+
+        if ($effectiveCategory !== '') {
+            $providersQuery->whereHas('services', fn ($serviceQuery) => $serviceQuery
+                ->where('is_active', true)
+                ->whereHas('category', fn ($categoryQuery) => $categoryQuery->where('slug', $effectiveCategory)));
+        }
+
+        if ($searchTokens !== []) {
+            $providersQuery->where(fn ($query) => $this->applyProviderSearchTokens($query, $searchTokens));
+        }
 
         if ($request->filled('location')) {
             $location = $request->string('location')->toString();
@@ -119,9 +131,100 @@ class LandingController extends Controller
             'categories' => $categories,
             'services' => $services,
             'providers' => $providers,
-            'filters' => $request->only(['search', 'location', 'category']),
+            'filters' => array_merge(
+                $request->only(['search', 'location', 'category']),
+                ['resolved_category' => $effectiveCategory !== '' ? $effectiveCategory : null]
+            ),
             'location_suggestions' => $this->locationSuggestions(),
         ]);
+    }
+
+    /**
+     * @return array{tokens: array<int, string>, inferred_category: string|null}
+     */
+    protected function buildSearchContext(string $search): array
+    {
+        $normalized = strtolower(trim($search));
+        if ($normalized === '') {
+            return ['tokens' => [], 'inferred_category' => null];
+        }
+
+        $rawTokens = preg_split('/[^a-z0-9]+/i', $normalized) ?: [];
+        $stopWords = [
+            'mujhe', 'mje', 'mjy', 'mujhy', 'chahiye', 'chahye', 'chaiye', 'chye', 'do', 'de', 'dijiye', 'please',
+            'plz', 'banda', 'banda?', 'number', 'num', 'contact', 'chahie', 'hai', 'ka', 'ki', 'ke', 'mein',
+            'me', 'or', 'aur', 'for', 'the', 'a', 'an', 'to', 'krdo', 'kardo', 'karna', 'bnda', 'bande',
+        ];
+
+        $tokens = array_values(array_filter($rawTokens, function (string $token) use ($stopWords) {
+            return strlen($token) >= 3 && ! in_array($token, $stopWords, true);
+        }));
+
+        $categoryHints = [
+            'plumbing' => ['plumb', 'plumber', 'leak', 'pipe', 'tap', 'naali', 'nalka', 'drain'],
+            'electrical' => ['elect', 'electric', 'bijli', 'wiring', 'switch', 'socket', 'short', 'fan', 'bulb'],
+            'ac-repair' => ['ac', 'cooling', 'compressor', 'aircond', 'aircondition'],
+            'cleaning' => ['clean', 'safai', 'sofa', 'carpet', 'wash'],
+            'painting' => ['paint', 'painter', 'rang'],
+            'carpentry' => ['carpenter', 'wood', 'darwaza', 'furniture'],
+        ];
+
+        $inferredCategory = null;
+        foreach ($categoryHints as $slug => $keywords) {
+            foreach ($keywords as $keyword) {
+                if (str_contains($normalized, $keyword)) {
+                    $inferredCategory = $slug;
+                    break 2;
+                }
+            }
+        }
+
+        return ['tokens' => $tokens, 'inferred_category' => $inferredCategory];
+    }
+
+    /**
+     * @param array<int, string> $tokens
+     */
+    protected function applyServiceSearchTokens($query, array $tokens): void
+    {
+        foreach ($tokens as $index => $token) {
+            $method = $index === 0 ? 'where' : 'orWhere';
+            $query->{$method}(function ($innerQuery) use ($token) {
+                $innerQuery->where('title', 'like', "%{$token}%")
+                    ->orWhere('short_description', 'like', "%{$token}%")
+                    ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery
+                        ->where('name', 'like', "%{$token}%")
+                        ->orWhere('slug', 'like', "%{$token}%"))
+                    ->orWhereHas('provider.user', fn ($providerQuery) => $providerQuery
+                        ->where('name', 'like', "%{$token}%"));
+            });
+        }
+    }
+
+    /**
+     * @param array<int, string> $tokens
+     */
+    protected function applyProviderSearchTokens($query, array $tokens): void
+    {
+        foreach ($tokens as $index => $token) {
+            $method = $index === 0 ? 'where' : 'orWhere';
+            $query->{$method}(function ($innerQuery) use ($token) {
+                $innerQuery->where('service_area', 'like', "%{$token}%")
+                    ->orWhereHas('user', fn ($userQuery) => $userQuery
+                        ->where('name', 'like', "%{$token}%")
+                        ->orWhere('city', 'like', "%{$token}%")
+                        ->orWhere('address', 'like', "%{$token}%"))
+                    ->orWhereHas('services', fn ($serviceQuery) => $serviceQuery
+                        ->where('is_active', true)
+                        ->where(function ($innerServiceQuery) use ($token) {
+                            $innerServiceQuery->where('title', 'like', "%{$token}%")
+                                ->orWhere('short_description', 'like', "%{$token}%")
+                                ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery
+                                    ->where('name', 'like', "%{$token}%")
+                                    ->orWhere('slug', 'like', "%{$token}%"));
+                        }));
+            });
+        }
     }
 
     protected function locationSuggestions(): array

@@ -248,17 +248,6 @@ interface BookingCreateResponse {
   payment_methods: string[];
 }
 
-interface AiSmartSearchResponse {
-  search_query: string;
-  category_slug: string | null;
-  urgency: 'low' | 'medium' | 'high';
-  summary: string;
-  filters?: {
-    location?: string | null;
-  };
-  follow_up_questions?: string[];
-}
-
 interface AiBookingHelperResponse {
   customer_summary: string;
   missing_fields: string[];
@@ -428,8 +417,6 @@ export class App {
   readonly serviceDetailData = signal<ServiceDetailResponse | null>(null);
   readonly providerDetailData = signal<ProviderDetailResponse | null>(null);
   readonly bookingCreateData = signal<BookingCreateResponse | null>(null);
-  readonly aiSearchLoading = signal(false);
-  readonly aiSearchResult = signal<AiSmartSearchResponse | null>(null);
   readonly aiBookingLoading = signal(false);
   readonly aiBookingResult = signal<AiBookingHelperResponse | null>(null);
   readonly aiProviderLoading = signal(false);
@@ -499,10 +486,6 @@ export class App {
     notes: '',
     payment_method: 'Cash on Service',
   };
-  aiSearchForm = {
-    problem: '',
-  };
-
   constructor() {
     const storedLocale = this.readStoredLocale();
     this.applyLocale(storedLocale);
@@ -752,36 +735,6 @@ export class App {
 
     this.navigateWithFilters('/');
     this.load();
-  }
-
-  runAiSmartSearch(): void {
-    if (!this.aiSearchForm.problem.trim()) {
-      this.authError.set('Pehle apni problem likhein, phir AI helper use karein.');
-      return;
-    }
-
-    this.aiSearchLoading.set(true);
-    this.authError.set('');
-
-    this.http.post<{ data: AiSmartSearchResponse }>(this.backendUrl('/api/ai/smart-search'), {
-      problem: this.aiSearchForm.problem.trim(),
-      location: this.location().trim() || null,
-    }).pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (response) => {
-          const data = response.data;
-          this.aiSearchResult.set(data);
-          this.search.set(data.search_query ?? this.search());
-          this.category.set(data.category_slug ?? '');
-          this.location.set(data.filters?.location ?? this.location());
-          this.currentLocationText.set(data.summary || this.currentLocationText());
-          this.aiSearchLoading.set(false);
-        },
-        error: (error) => {
-          this.aiSearchLoading.set(false);
-          this.authError.set(error?.error?.message ?? 'AI search helper temporarily unavailable hai. Please dobara try karein.');
-        }
-      });
   }
 
   onServiceFileChange(event: Event): void {
