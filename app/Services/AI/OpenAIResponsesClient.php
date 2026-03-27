@@ -3,6 +3,7 @@
 namespace App\Services\AI;
 
 use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use RuntimeException;
 
@@ -29,7 +30,7 @@ class OpenAIResponsesClient
             'input' => $input,
         ];
 
-        i f ($temperature !== null) {
+        if ($temperature !== null) {
             $payload['temperature'] = $temperature;
         }
 
@@ -97,19 +98,26 @@ class OpenAIResponsesClient
      */
     private function sendRequest(array $payload, string $apiKey): array
     {
-        $response = $this->http
-            ->baseUrl((string) config('services.openai.base_url'))
-            ->timeout((int) config('services.openai.timeout'))
-            ->withToken($apiKey)
-            ->acceptJson()
-            ->asJson()
-            ->post('/responses', $payload);
-
         try {
+            $response = $this->http
+                ->baseUrl((string) config('services.openai.base_url'))
+                ->timeout((int) config('services.openai.timeout'))
+                ->withToken($apiKey)
+                ->acceptJson()
+                ->asJson()
+                ->post('/responses', $payload);
+
             return $response->throw()->json();
         } catch (RequestException $exception) {
-            $message = $response->json('error.message')
-                ?? $exception->getMessage();
+            $message = $exception->response?->json('error.message');
+
+            if (! is_string($message) || $message === '') {
+                $message = $exception->getMessage();
+            }
+
+            throw new RuntimeException('OpenAI request failed: ' . $message, previous: $exception);
+        } catch (ConnectionException $exception) {
+            $message = $exception->getMessage();
 
             throw new RuntimeException('OpenAI request failed: ' . $message, previous: $exception);
         }

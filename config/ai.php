@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'fallback_enabled' => env('AI_FALLBACK_ENABLED', env('APP_ENV') !== 'production'),
+
     'features' => [
         'smart_search' => [
             'enabled' => env('AI_SMART_SEARCH_ENABLED', true),

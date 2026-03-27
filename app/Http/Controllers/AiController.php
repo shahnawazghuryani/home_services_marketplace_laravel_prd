@@ -136,11 +136,27 @@ class AiController extends Controller
     {
         $normalized = strtolower($message);
 
+        if (
+            str_contains($normalized, 'ssl certificate')
+            || str_contains($normalized, 'curl error 60')
+            || str_contains($normalized, 'curl error 7')
+            || str_contains($normalized, 'could not connect')
+            || str_contains($normalized, 'connection refused')
+            || str_contains($normalized, 'timed out')
+        ) {
+            return 'AI helper filhal network issue ki wajah se unavailable hai. Please thori der baad dobara try karein.';
+        }
+
         if (str_contains($normalized, 'quota') || str_contains($normalized, 'billing')) {
             return 'AI helper temporarily unavailable hai. Please thori der baad dobara try karein.';
         }
 
-        if (str_contains($normalized, 'api key')) {
+        if (
+            str_contains($normalized, 'openai_api_key is missing')
+            || str_contains($normalized, 'api key')
+            || str_contains($normalized, 'invalid_api_key')
+            || str_contains($normalized, 'incorrect api key')
+        ) {
             return 'AI helper configuration incomplete hai. Please administrator se rabta karein.';
         }
 
