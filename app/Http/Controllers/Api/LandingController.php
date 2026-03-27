@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Provider;
+use App\Models\Review;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -19,11 +20,11 @@ class LandingController extends Controller
         $effectiveCategory = $requestedCategory !== '' ? $requestedCategory : ($searchContext['inferred_category'] ?? '');
         $searchTokens = $searchContext['tokens'] ?? [];
 
-        $servicesQuery = Service::with(['category', 'provider.user'])
+        $servicesQuery = Service::with(['category', 'categories', 'provider.user'])
             ->where('is_active', true);
 
         if ($effectiveCategory !== '') {
-            $servicesQuery->whereHas('category', fn ($query) => $query->where('slug', $effectiveCategory));
+            $servicesQuery->whereHas('categories', fn ($query) => $query->where('slug', $effectiveCategory));
         }
 
         if ($searchTokens !== []) {
@@ -47,7 +48,7 @@ class LandingController extends Controller
         if ($effectiveCategory !== '') {
             $providersQuery->whereHas('services', fn ($serviceQuery) => $serviceQuery
                 ->where('is_active', true)
-                ->whereHas('category', fn ($categoryQuery) => $categoryQuery->where('slug', $effectiveCategory)));
+                ->whereHas('categories', fn ($categoryQuery) => $categoryQuery->where('slug', $effectiveCategory)));
         }
 
         if ($searchTokens !== []) {
@@ -82,6 +83,12 @@ class LandingController extends Controller
                 ];
             });
 
+        $providerRatings = Review::query()
+            ->selectRaw('provider_id, ROUND(AVG(rating), 1) as rating_avg, COUNT(*) as reviews_count')
+            ->groupBy('provider_id')
+            ->get()
+            ->keyBy('provider_id');
+
         $services = $servicesQuery->latest()->take(9)->get()->map(function ($service) {
             return [
                 'id' => $service->id,
@@ -91,13 +98,16 @@ class LandingController extends Controller
                 'price' => (float) $service->price,
                 'duration_minutes' => $service->duration_minutes,
                 'image_url' => $service->image_path ? asset($service->image_path) : null,
-                'category' => $service->category->name,
+                'category' => $service->category?->name,
+                'categories' => $service->categories->pluck('name')->values()->all(),
                 'provider' => [
                     'id' => $service->provider->id,
                     'name' => $service->provider->user->name,
                     'phone' => $service->provider->user->phone,
                     'city' => $service->provider->user->city,
                     'service_area' => $service->provider->service_area,
+                    'rating_avg' => (float) ($providerRatings->get($service->provider->user_id)->rating_avg ?? 0),
+                    'reviews_count' => (int) ($providerRatings->get($service->provider->user_id)->reviews_count ?? 0),
                 ],
             ];
         });
@@ -192,7 +202,7 @@ class LandingController extends Controller
             $query->{$method}(function ($innerQuery) use ($token) {
                 $innerQuery->where('title', 'like', "%{$token}%")
                     ->orWhere('short_description', 'like', "%{$token}%")
-                    ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery
+                    ->orWhereHas('categories', fn ($categoryQuery) => $categoryQuery
                         ->where('name', 'like', "%{$token}%")
                         ->orWhere('slug', 'like', "%{$token}%"))
                     ->orWhereHas('provider.user', fn ($providerQuery) => $providerQuery
@@ -219,7 +229,7 @@ class LandingController extends Controller
                         ->where(function ($innerServiceQuery) use ($token) {
                             $innerServiceQuery->where('title', 'like', "%{$token}%")
                                 ->orWhere('short_description', 'like', "%{$token}%")
-                                ->orWhereHas('category', fn ($categoryQuery) => $categoryQuery
+                                ->orWhereHas('categories', fn ($categoryQuery) => $categoryQuery
                                     ->where('name', 'like', "%{$token}%")
                                     ->orWhere('slug', 'like', "%{$token}%"));
                         }));

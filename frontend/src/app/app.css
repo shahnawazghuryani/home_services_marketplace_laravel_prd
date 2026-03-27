@@ -1,3 +1,80 @@
 :host {
   display: block;
 }
+
+.category-chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.category-chip {
+  border: 1px solid rgba(255, 193, 7, 0.35);
+  background: rgba(255, 193, 7, 0.08);
+  color: #f3f4f6;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-chip:hover {
+  border-color: rgba(255, 193, 7, 0.7);
+  background: rgba(255, 193, 7, 0.18);
+}
+
+.category-chip.active {
+  border-color: #ffc107;
+  background: rgba(255, 193, 7, 0.3);
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(255, 193, 7, 0.25) inset;
+}
+
+.service-category-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.service-category-badge {
+  max-width: 100%;
+}
+
+.service-category-more {
+  opacity: 0.85;
+}
+
+.service-category-toggle {
+  cursor: pointer;
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.35);
+}
+
+.service-review-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.service-review-stars {
+  color: #f4b400;
+  letter-spacing: 1px;
+  font-size: 0.88rem;
+  line-height: 1;
+}
+
+.service-review-text {
+  color: #d6dbe2;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.service-review-empty {
+  color: #9aa3af;
+  font-size: 0.8rem;
+}

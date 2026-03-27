@@ -100,15 +100,6 @@
 
               </div>
 
-              <div class="side-stack">
-                <div class="card compact-card">
-                  <div class="location-row">
-                    <strong>{{ t('currentLocation') }}</strong>
-                    <button type="button" class="btn secondary" (click)="useCurrentLocation()">{{ t('useCurrentLocation') }}</button>
-                  </div>
-                  <p class="muted current-location-text">{{ currentLocationText() }}</p>
-                </div>
-              </div>
             </div>
 
             <div class="grid grid-3">
@@ -121,14 +112,40 @@
                   }
 
                   <div class="service-card-body">
-                    <span class="badge">{{ service.category }}</span>
+                    <div class="service-category-row">
+                      @for (cat of serviceCategoryPreview(service, isServiceCategoriesExpanded(service.id) ? 999 : 3); track cat) {
+                        <span class="badge service-category-badge">{{ cat }}</span>
+                      }
+                      @if (serviceCategoryMoreCount(service) > 0) {
+                        <button
+                          type="button"
+                          class="badge service-category-more service-category-toggle"
+                          (click)="toggleServiceCategories(service.id)">
+                          {{ isServiceCategoriesExpanded(service.id) ? '- show less' : '+' + serviceCategoryMoreCount(service) + ' more' }}
+                        </button>
+                      }
+                    </div>
                     <h3>{{ service.title }}</h3>
-                    <p>{{ service.short_description }}</p>
-                    <div class="notice">{{ service.provider.service_area }} - {{ service.provider.city }} - {{ service.duration_minutes }} {{ t('mins') }}</div>
+                    <div class="notice">
+                      {{ service.provider.service_area }} - {{ service.provider.city }}
+                      @if (hasPositiveNumber(service.duration_minutes)) {
+                        - {{ service.duration_minutes }} {{ t('mins') }}
+                      }
+                    </div>
 
                     <div class="provider-strip">
                       <a class="avatar-pill" [href]="backendUrl('/providers/' + service.provider.id)">{{ service.provider.name }}</a>
-                      <span class="price">PKR {{ service.price | number:'1.0-0' }}</span>
+                      @if (hasPositiveNumber(service.price)) {
+                        <span class="price">PKR {{ service.price | number:'1.0-0' }}</span>
+                      }
+                    </div>
+                    <div class="service-review-row">
+                      @if (reviewsCount(service.provider.reviews_count) > 0) {
+                        <span class="service-review-stars">{{ ratingStars(service.provider.rating_avg) }}</span>
+                        <span class="service-review-text">{{ ratingValue(service.provider.rating_avg) | number:'1.0-1' }} ({{ reviewsCount(service.provider.reviews_count) }} reviews)</span>
+                      } @else {
+                        <span class="service-review-empty">No reviews yet</span>
+                      }
                     </div>
 
                     <div class="stack-actions">
@@ -235,15 +252,6 @@
 
               </div>
 
-              <div class="side-stack">
-                <div class="card compact-card">
-                  <div class="location-row">
-                    <strong>{{ t('currentLocation') }}</strong>
-                    <button type="button" class="btn secondary" (click)="useCurrentLocation()">{{ t('useCurrentLocation') }}</button>
-                  </div>
-                  <p class="muted current-location-text">{{ currentLocationText() }}</p>
-                </div>
-              </div>
             </div>
 
             <div class="results-head">
@@ -263,13 +271,39 @@
                     <div class="service-thumb"></div>
                   }
                   <div class="service-card-body">
-                    <span class="badge">{{ service.category }}</span>
+                    <div class="service-category-row">
+                      @for (cat of serviceCategoryPreview(service, isServiceCategoriesExpanded(service.id) ? 999 : 3); track cat) {
+                        <span class="badge service-category-badge">{{ cat }}</span>
+                      }
+                      @if (serviceCategoryMoreCount(service) > 0) {
+                        <button
+                          type="button"
+                          class="badge service-category-more service-category-toggle"
+                          (click)="toggleServiceCategories(service.id)">
+                          {{ isServiceCategoriesExpanded(service.id) ? '- show less' : '+' + serviceCategoryMoreCount(service) + ' more' }}
+                        </button>
+                      }
+                    </div>
                     <h3>{{ service.title }}</h3>
-                    <p class="service-summary">{{ service.short_description }}</p>
-                    <div class="service-meta">{{ service.provider.city }} - {{ service.duration_minutes }} {{ t('mins') }}</div>
+                    <div class="service-meta">
+                      {{ service.provider.city }}
+                      @if (hasPositiveNumber(service.duration_minutes)) {
+                        - {{ service.duration_minutes }} {{ t('mins') }}
+                      }
+                    </div>
                     <div class="provider-strip">
                       <a class="avatar-pill" [href]="backendUrl('/providers/' + service.provider.id)">{{ service.provider.name }}</a>
-                      <span class="price">PKR {{ service.price | number:'1.0-0' }}</span>
+                      @if (hasPositiveNumber(service.price)) {
+                        <span class="price">PKR {{ service.price | number:'1.0-0' }}</span>
+                      }
+                    </div>
+                    <div class="service-review-row">
+                      @if (reviewsCount(service.provider.reviews_count) > 0) {
+                        <span class="service-review-stars">{{ ratingStars(service.provider.rating_avg) }}</span>
+                        <span class="service-review-text">{{ ratingValue(service.provider.rating_avg) | number:'1.0-1' }} ({{ reviewsCount(service.provider.reviews_count) }} reviews)</span>
+                      } @else {
+                        <span class="service-review-empty">No reviews yet</span>
+                      }
                     </div>
                     <div class="stack-actions">
                       <a class="btn brand" [href]="backendUrl('/services/' + service.slug)">{{ t('viewDetails') }}</a>
@@ -303,13 +337,19 @@
               } @else {
                 <div class="detail-cover"></div>
               }
-              <span class="badge">{{ detail.service.category }}</span>
+              <span class="badge">{{ serviceCategoriesLabel(detail.service) }}</span>
               <h1 class="detail-title">{{ detail.service.title }}</h1>
-              <p class="muted detail-summary">{{ detail.service.short_description }}</p>
               <div class="detail-meta">
-                <div class="meta-box"><strong>Price</strong><div>PKR {{ detail.service.price | number:'1.0-0' }}</div></div>
-                <div class="meta-box"><strong>Duration</strong><div>{{ detail.service.duration_minutes }} minutes</div></div>
+                @if (hasPositiveNumber(detail.service.price)) {
+                  <div class="meta-box"><strong>Price</strong><div>PKR {{ detail.service.price | number:'1.0-0' }}</div></div>
+                }
+                @if (hasPositiveNumber(detail.service.duration_minutes)) {
+                  <div class="meta-box"><strong>Duration</strong><div>{{ detail.service.duration_minutes }} minutes</div></div>
+                }
                 <div class="meta-box"><strong>Provider</strong><div>{{ detail.service.provider.name }}</div></div>
+                @if (hasText(detail.service.price_type) && hasPositiveNumber(detail.service.price)) {
+                  <div class="meta-box"><strong>Price type</strong><div>{{ detail.service.price_type }}</div></div>
+                }
               </div>
               <div class="notice">{{ detail.service.description }}</div>
               <div class="notice detail-note">Service area: {{ detail.provider_location_label }}</div>
@@ -368,7 +408,7 @@
                 <p class="muted">Isi category me aur bhi options available hain.</p>
                 <div class="list">
                   @for (related of detail.related_services; track related.id) {
-                    <a class="notice" [href]="backendUrl('/services/' + related.slug)">{{ related.title }} by {{ related.provider_name }}</a>
+                    <a class="notice" [href]="backendUrl('/services/' + related.slug)">{{ related.title }} by {{ related.provider_name }} ({{ serviceCategoriesLabel(related) }})</a>
                   }
                 </div>
               </div>
@@ -412,7 +452,12 @@
               <h3>Services by this provider</h3>
               <div class="list">
                 @for (service of detail.services; track service.id) {
-                  <a class="notice" [href]="backendUrl('/services/' + service.slug)">{{ service.title }} - {{ detail.provider.city }} - PKR {{ service.price | number:'1.0-0' }}</a>
+                  <a class="notice" [href]="backendUrl('/services/' + service.slug)">
+                    {{ service.title }} - {{ detail.provider.city }} - {{ serviceCategoriesLabel(service) }}
+                    @if (hasPositiveNumber(service.price)) {
+                      - PKR {{ service.price | number:'1.0-0' }}
+                    }
+                  </a>
                 }
               </div>
             </div>
@@ -432,11 +477,14 @@
             <div class="auth-showcase">
               <span class="kicker">Booking Request</span>
               <h2>{{ bookingPage.service.title }}</h2>
-              <p>{{ bookingPage.service.short_description }}</p>
               <div class="list" style="margin-top:22px;">
                 <div class="notice">Provider: {{ bookingPage.service.provider_name }}</div>
-                <div class="notice">Price: PKR {{ bookingPage.service.price | number:'1.0-0' }}</div>
-                <div class="notice">Duration: {{ bookingPage.service.duration_minutes }} minutes</div>
+                @if (hasPositiveNumber(bookingPage.service.price)) {
+                  <div class="notice">Price: PKR {{ bookingPage.service.price | number:'1.0-0' }}</div>
+                }
+                @if (hasPositiveNumber(bookingPage.service.duration_minutes)) {
+                  <div class="notice">Duration: {{ bookingPage.service.duration_minutes }} minutes</div>
+                }
               </div>
             </div>
             <div class="auth-card">
@@ -631,7 +679,13 @@
                     <div class="quick-item">
                       <div>
                         <strong>{{ service['title'] }}</strong>
-                        <div class="muted">{{ service['category'] }} - PKR {{ service['price'] }} - {{ service['status'] }}</div>
+                        <div class="muted">
+                          {{ service['category'] }}
+                          @if (hasPositiveNumber(service['price'])) {
+                            - PKR {{ service['price'] }}
+                          }
+                          - {{ service['status'] }}
+                        </div>
                       </div>
                       <div class="stack-actions">
                         <a class="btn secondary" [href]="service['edit_url']">Edit</a>
@@ -778,23 +832,31 @@
                       </select>
                     </label>
                   }
-                  <label>Category
-                    <select name="category_id" [(ngModel)]="serviceForm.category_id" required>
+                  <label>Categories (multiple)
+                    <input type="hidden" name="category_id" [ngModel]="serviceForm.category_ids[0] || ''">
+                    <div class="category-chip-wrap">
                       @for (category of serviceFormData()?.categories ?? []; track category.id) {
-                        <option [value]="category.id">{{ category.name }}</option>
+                        <button
+                          type="button"
+                          class="category-chip"
+                          [class.active]="isServiceCategorySelected(category.id)"
+                          (click)="toggleServiceCategory(category.id)">
+                          {{ category.name }}
+                        </button>
                       }
-                    </select>
+                    </div>
+                    <small class="muted">Multiple categories select karne ke liye chips par click karein.</small>
                   </label>
                   <label>Service title<input type="text" name="title" [(ngModel)]="serviceForm.title" required></label>
-                  <label>Short description<input type="text" name="short_description" [(ngModel)]="serviceForm.short_description" required></label>
-                  <label>Price<input type="number" name="price" [(ngModel)]="serviceForm.price" required></label>
+                  <label>Price<input type="number" name="price" [(ngModel)]="serviceForm.price"></label>
                   <label>Price type
                     <select name="price_type" [(ngModel)]="serviceForm.price_type">
+                      <option value="">Select (optional)</option>
                       <option value="fixed">Fixed</option>
                       <option value="hourly">Hourly</option>
                     </select>
                   </label>
-                  <label>Duration minutes<input type="number" name="duration_minutes" [(ngModel)]="serviceForm.duration_minutes" required></label>
+                  <label>Duration minutes<input type="number" name="duration_minutes" [(ngModel)]="serviceForm.duration_minutes"></label>
                   @if (!isAdminServiceEditPage()) {
                     <label>Service image<input type="file" name="image" accept="image/*" (change)="onServiceFileChange($event)"></label>
                   }

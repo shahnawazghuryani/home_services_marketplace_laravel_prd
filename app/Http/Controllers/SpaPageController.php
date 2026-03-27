@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Provider;
+use App\Models\Review;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -13,10 +14,10 @@ class SpaPageController extends Controller
 {
     public function servicesIndex(Request $request): JsonResponse
     {
-        $query = Service::with(['category', 'provider.user'])->where('is_active', true);
+        $query = Service::with(['category', 'categories', 'provider.user'])->where('is_active', true);
 
         if ($request->filled('category')) {
-            $query->whereHas('category', fn ($categoryQuery) => $categoryQuery->where('slug', $request->input('category')));
+            $query->whereHas('categories', fn ($categoryQuery) => $categoryQuery->where('slug', $request->input('category')));
         }
 
         if ($request->filled('search')) {
@@ -41,6 +42,11 @@ class SpaPageController extends Controller
         }
 
         $services = $query->latest()->get();
+        $providerRatings = Review::query()
+            ->selectRaw('provider_id, ROUND(AVG(rating), 1) as rating_avg, COUNT(*) as reviews_count')
+            ->groupBy('provider_id')
+            ->get()
+            ->keyBy('provider_id');
 
         return response()->json([
             'services' => $services->map(fn (Service $service) => [
@@ -51,13 +57,16 @@ class SpaPageController extends Controller
                 'price' => (float) $service->price,
                 'duration_minutes' => $service->duration_minutes,
                 'image_url' => $service->image_path ? asset($service->image_path) : null,
-                'category' => $service->category->name,
+                'category' => $service->category?->name,
+                'categories' => $service->categories->pluck('name')->values()->all(),
                 'provider' => [
                     'id' => $service->provider->id,
                     'name' => $service->provider->user->name,
                     'phone' => $service->provider->user->phone,
                     'city' => $service->provider->user->city,
                     'service_area' => $service->provider->service_area,
+                    'rating_avg' => (float) ($providerRatings->get($service->provider->user_id)->rating_avg ?? 0),
+                    'reviews_count' => (int) ($providerRatings->get($service->provider->user_id)->reviews_count ?? 0),
                 ],
             ]),
             'categories' => Category::orderBy('name')->get(['id', 'name', 'slug']),
@@ -74,12 +83,17 @@ class SpaPageController extends Controller
 
     public function serviceShow(Request $request, string $slug): JsonResponse
     {
-        $service = Service::with(['category', 'provider.user', 'bookings.reviews'])
+        $service = Service::with(['category', 'categories', 'provider.user', 'bookings.reviews'])
             ->where('slug', $slug)
             ->firstOrFail();
 
-        $relatedServices = Service::with(['category', 'provider.user'])
-            ->where('category_id', $service->category_id)
+        $relatedCategoryIds = $service->categories->pluck('id')->all();
+        if ($relatedCategoryIds === []) {
+            $relatedCategoryIds = [$service->category_id];
+        }
+
+        $relatedServices = Service::with(['category', 'categories', 'provider.user'])
+            ->whereHas('categories', fn ($categoryQuery) => $categoryQuery->whereIn('categories.id', $relatedCategoryIds))
             ->where('id', '!=', $service->id)
             ->take(3)
             ->get();
@@ -97,7 +111,8 @@ class SpaPageController extends Controller
                 'price_type' => $service->price_type,
                 'duration_minutes' => $service->duration_minutes,
                 'image_url' => $service->image_path ? asset($service->image_path) : null,
-                'category' => $service->category->name,
+                'category' => $service->category?->name,
+                'categories' => $service->categories->pluck('name')->values()->all(),
                 'provider' => [
                     'id' => $service->provider->id,
                     'name' => $service->provider->user->name,
@@ -114,6 +129,7 @@ class SpaPageController extends Controller
                 'title' => $related->title,
                 'slug' => $related->slug,
                 'provider_name' => $related->provider->user->name,
+                'categories' => $related->categories->pluck('name')->values()->all(),
             ]),
             'auth' => [
                 'logged_in' => (bool) $request->user(),
@@ -125,7 +141,7 @@ class SpaPageController extends Controller
 
     public function providerShow(int $provider): JsonResponse
     {
-        $provider = Provider::with(['user', 'services.category', 'reviews.customer'])
+        $provider = Provider::with(['user', 'services.category', 'services.categories', 'reviews.customer'])
             ->findOrFail($provider);
 
         $locationLabel = collect([
@@ -157,13 +173,14 @@ class SpaPageController extends Controller
                 'slug' => $service->slug,
                 'price' => (float) $service->price,
                 'category' => $service->category?->name,
+                'categories' => $service->categories->pluck('name')->values()->all(),
             ]),
         ]);
     }
 
     public function bookingCreate(Request $request, string $slug): JsonResponse
     {
-        $service = Service::with(['category', 'provider.user'])->where('slug', $slug)->firstOrFail();
+        $service = Service::with(['category', 'categories', 'provider.user'])->where('slug', $slug)->firstOrFail();
 
         abort_unless($request->user()?->isCustomer(), 403);
 

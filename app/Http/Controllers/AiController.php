@@ -44,7 +44,7 @@ class AiController extends Controller
         ]);
 
         $providers = Provider::query()
-            ->with(['user', 'services.category'])
+            ->with(['user', 'services.category', 'services.categories'])
             ->whereNotNull('approved_at')
             ->when($data['location'] ?? null, function ($query, $location) {
                 $query->where(function ($inner) use ($location) {
@@ -71,6 +71,8 @@ class AiController extends Controller
                     'title' => $service->title,
                     'category' => $service->category?->name,
                     'category_slug' => $service->category?->slug,
+                    'categories' => $service->categories->pluck('name')->values()->all(),
+                    'category_slugs' => $service->categories->pluck('slug')->values()->all(),
                     'price' => (float) $service->price,
                 ])->values()->all(),
             ];

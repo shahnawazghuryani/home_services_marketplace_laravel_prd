@@ -16,10 +16,10 @@ class ServiceController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Service::with(['category', 'provider.user'])->where('is_active', true);
+        $query = Service::with(['category', 'categories', 'provider.user'])->where('is_active', true);
 
         if ($request->filled('category')) {
-            $query->whereHas('category', fn ($categoryQuery) => $categoryQuery->where('slug', $request->input('category')));
+            $query->whereHas('categories', fn ($categoryQuery) => $categoryQuery->where('slug', $request->input('category')));
         }
 
         if ($request->filled('search')) {
@@ -58,12 +58,17 @@ class ServiceController extends Controller
 
     public function show(string $slug)
     {
-        $service = Service::with(['category', 'provider.user', 'bookings.reviews'])
+        $service = Service::with(['category', 'categories', 'provider.user', 'bookings.reviews'])
             ->where('slug', $slug)
             ->firstOrFail();
 
-        $relatedServices = Service::with(['category', 'provider.user'])
-            ->where('category_id', $service->category_id)
+        $relatedCategoryIds = $service->categories->pluck('id')->all();
+        if ($relatedCategoryIds === []) {
+            $relatedCategoryIds = [$service->category_id];
+        }
+
+        $relatedServices = Service::with(['category', 'categories', 'provider.user'])
+            ->whereHas('categories', fn ($categoryQuery) => $categoryQuery->whereIn('categories.id', $relatedCategoryIds))
             ->where('id', '!=', $service->id)
             ->take(3)
             ->get();
@@ -96,12 +101,15 @@ class ServiceController extends Controller
         $provider = $request->user()->providerProfile;
         abort_unless($provider && $provider->approved_at, 403, 'Your provider profile must be approved before adding services.');
 
-        $data = $this->validateService($request);
+        [$data, $categoryIds] = $this->validateService($request);
+
         $data['provider_id'] = $provider->id;
+        $data['category_id'] = (int) $categoryIds[0];
         $data['slug'] = $this->uniqueSlug($data['title']);
         $data['image_path'] = $this->uploadImage($request);
 
-        Service::create($data);
+        $service = Service::create($data);
+        $service->categories()->sync($categoryIds);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -132,11 +140,13 @@ class ServiceController extends Controller
         $provider = $request->user()->providerProfile;
         abort_unless($provider && $service->provider_id === $provider->id, 403);
 
-        $data = $this->validateService($request);
+        [$data, $categoryIds] = $this->validateService($request);
+        $data['category_id'] = (int) $categoryIds[0];
         $data['slug'] = $service->title !== $data['title'] ? $this->uniqueSlug($data['title'], $service->id) : $service->slug;
         $data['image_path'] = $this->uploadImage($request, $service->image_path);
 
         $service->update($data);
+        $service->categories()->sync($categoryIds);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -175,6 +185,7 @@ class ServiceController extends Controller
             'service' => $service ? [
                 'id' => $service->id,
                 'category_id' => $service->category_id,
+                'category_ids' => $service->categories()->pluck('categories.id')->values()->all(),
                 'title' => $service->title,
                 'short_description' => $service->short_description,
                 'description' => $service->description,
@@ -197,6 +208,7 @@ class ServiceController extends Controller
                 'id' => $service->id,
                 'provider_id' => $service->provider_id,
                 'category_id' => $service->category_id,
+                'category_ids' => $service->categories()->pluck('categories.id')->values()->all(),
                 'title' => $service->title,
                 'short_description' => $service->short_description,
                 'description' => $service->description,
@@ -216,21 +228,48 @@ class ServiceController extends Controller
     protected function validateService(Request $request): array
     {
         $validated = $request->validate([
-            'category_id' => ['required', 'exists:categories,id'],
+            'category_id' => ['nullable', 'exists:categories,id'],
+            'category_ids' => ['nullable', 'array', 'min:1'],
+            'category_ids.*' => ['required', 'distinct', 'exists:categories,id'],
             'title' => ['required', 'string', 'max:255'],
-            'short_description' => ['required', 'string', 'max:255'],
+            'short_description' => ['nullable', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:2000'],
-            'price' => ['required', 'numeric', 'min:1'],
-            'price_type' => ['required', Rule::in(['fixed', 'hourly'])],
-            'duration_minutes' => ['required', 'integer', 'min:15'],
+            'price' => ['nullable', 'numeric', 'min:0'],
+            'price_type' => ['nullable', Rule::in(['fixed', 'hourly'])],
+            'duration_minutes' => ['nullable', 'integer', 'min:0'],
             'image' => ['nullable', 'image', 'max:4096'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
+        $categoryIds = collect($validated['category_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($categoryIds === [] && isset($validated['category_id'])) {
+            $categoryIds = [(int) $validated['category_id']];
+        }
+
+        if ($categoryIds === []) {
+            abort(422, 'At least one category is required.');
+        }
+
+        $validated['short_description'] = trim((string) ($validated['short_description'] ?? '')) !== ''
+            ? trim((string) $validated['short_description'])
+            : Str::limit(trim((string) $validated['description']), 255, '');
+        $validated['price'] = (float) ($validated['price'] ?? 0);
+        $validated['price_type'] = trim((string) ($validated['price_type'] ?? '')) !== ''
+            ? (string) $validated['price_type']
+            : 'fixed';
+        $validated['duration_minutes'] = (int) ($validated['duration_minutes'] ?? 0);
+
+        unset($validated['category_ids']);
         $validated['is_active'] = $request->boolean('is_active');
         unset($validated['image']);
 
-        return $validated;
+        return [$validated, $categoryIds];
     }
 
     protected function uniqueSlug(string $title, ?int $ignoreId = null): string

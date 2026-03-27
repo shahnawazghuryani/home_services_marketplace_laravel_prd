@@ -13,11 +13,11 @@ class HomeController extends Controller
     public function index(Request $request)
     {
         $categories = Category::withCount('services')->get();
-        $servicesQuery = Service::with(['category', 'provider.user'])
+        $servicesQuery = Service::with(['category', 'categories', 'provider.user'])
             ->where('is_active', true);
 
         if ($request->filled('category')) {
-            $servicesQuery->whereHas('category', fn ($categoryQuery) => $categoryQuery->where('slug', $request->input('category')));
+            $servicesQuery->whereHas('categories', fn ($categoryQuery) => $categoryQuery->where('slug', $request->input('category')));
         }
 
         if ($request->filled('search')) {
@@ -41,7 +41,7 @@ class HomeController extends Controller
 
         $featuredServices = $servicesQuery->latest()->take(9)->get();
 
-        $featuredProviders = Provider::with(['user', 'services.category'])
+        $featuredProviders = Provider::with(['user', 'services.category', 'services.categories'])
             ->whereNotNull('approved_at')
             ->when($request->filled('location'), function ($query) use ($request) {
                 $location = $request->input('location');

@@ -38,7 +38,7 @@ class DashboardController extends Controller
                 'bookings' => Booking::with(['customer', 'provider', 'service'])->latest()->take(8)->get(),
                 'notifications' => $notifications,
                 'categories' => Category::latest()->get(),
-                'services' => Service::with(['category', 'provider.user'])->latest()->take(12)->get(),
+                'services' => Service::with(['category', 'categories', 'provider.user'])->latest()->take(12)->get(),
                 'trafficSummary' => $this->adminTrafficSummary(),
             ]);
         }
@@ -135,11 +135,11 @@ class DashboardController extends Controller
                     'update_url' => route('admin.categories.update', $category),
                     'delete_url' => route('admin.categories.destroy', $category),
                 ]),
-                'services' => Service::with(['category', 'provider.user'])->latest()->take(12)->get()->map(fn ($service) => [
+                'services' => Service::with(['category', 'categories', 'provider.user'])->latest()->take(12)->get()->map(fn ($service) => [
                     'id' => $service->id,
                     'title' => $service->title,
                     'provider' => $service->provider->user->name,
-                    'category' => $service->category->name,
+                    'category' => $service->categories->pluck('name')->implode(', '),
                     'status' => $service->is_active ? 'active' : 'inactive',
                     'edit_url' => route('admin.services.edit', $service),
                     'delete_url' => route('admin.services.destroy', $service),
@@ -155,7 +155,7 @@ class DashboardController extends Controller
 
         if ($user->isProvider()) {
             $profile = $user->providerProfile;
-            $services = Service::with('category')->where('provider_id', $profile?->id)->latest()->get();
+            $services = Service::with(['category', 'categories'])->where('provider_id', $profile?->id)->latest()->get();
             $bookings = Booking::with(['customer', 'service'])->where('provider_id', $user->id)->latest()->get();
             $trafficSummary = $this->providerTrafficSummary($profile?->id);
 
@@ -194,7 +194,7 @@ class DashboardController extends Controller
                 'services' => $services->map(fn ($service) => [
                     'id' => $service->id,
                     'title' => $service->title,
-                    'category' => $service->category->name,
+                    'category' => $service->categories->pluck('name')->implode(', '),
                     'price' => (float) $service->price,
                     'duration_minutes' => $service->duration_minutes,
                     'status' => $service->is_active ? 'active' : 'inactive',
@@ -405,20 +405,50 @@ class DashboardController extends Controller
 
         $data = $request->validate([
             'provider_id' => ['required', 'exists:providers,id'],
-            'category_id' => ['required', 'exists:categories,id'],
+            'category_id' => ['nullable', 'exists:categories,id'],
+            'category_ids' => ['nullable', 'array', 'min:1'],
+            'category_ids.*' => ['required', 'distinct', 'exists:categories,id'],
             'title' => ['required', 'string', 'max:255'],
-            'short_description' => ['required', 'string', 'max:255'],
+            'short_description' => ['nullable', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:2000'],
-            'price' => ['required', 'numeric', 'min:1'],
-            'price_type' => ['required', Rule::in(['fixed', 'hourly'])],
-            'duration_minutes' => ['required', 'integer', 'min:15'],
+            'price' => ['nullable', 'numeric', 'min:0'],
+            'price_type' => ['nullable', Rule::in(['fixed', 'hourly'])],
+            'duration_minutes' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
         ]);
+
+        $categoryIds = collect($data['category_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($categoryIds === [] && isset($data['category_id'])) {
+            $categoryIds = [(int) $data['category_id']];
+        }
+
+        if ($categoryIds === []) {
+            abort(422, 'At least one category is required.');
+        }
+
+        $data['short_description'] = trim((string) ($data['short_description'] ?? '')) !== ''
+            ? trim((string) $data['short_description'])
+            : Str::limit(trim((string) $data['description']), 255, '');
+        $data['price'] = (float) ($data['price'] ?? 0);
+        $data['price_type'] = trim((string) ($data['price_type'] ?? '')) !== ''
+            ? (string) $data['price_type']
+            : 'fixed';
+        $data['duration_minutes'] = (int) ($data['duration_minutes'] ?? 0);
+
+        $data['category_id'] = $categoryIds[0];
+        unset($data['category_ids']);
 
         $service->update([
             ...$data,
             'is_active' => $request->boolean('is_active'),
         ]);
+        $service->categories()->sync($categoryIds);
 
         if ($request->expectsJson()) {
             return response()->json([

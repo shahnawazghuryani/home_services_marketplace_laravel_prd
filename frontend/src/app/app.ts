@@ -21,13 +21,16 @@ interface ServiceItem {
   price: number;
   duration_minutes: number;
   image_url: string | null;
-  category: string;
+  category: string | null;
+  categories?: string[];
   provider: {
     id: number;
     name: string;
     phone: string;
     city: string;
     service_area: string;
+    rating_avg?: number;
+    reviews_count?: number;
   };
 }
 
@@ -162,6 +165,7 @@ interface ServiceFormData {
     id: number;
     provider_id?: number;
     category_id: number;
+    category_ids?: number[];
     title: string;
     short_description: string;
     description: string;
@@ -205,6 +209,7 @@ interface ServiceDetailResponse {
     title: string;
     slug: string;
     provider_name: string;
+    categories?: string[];
   }>;
   auth: {
     logged_in: boolean;
@@ -228,6 +233,7 @@ interface ProviderDetailResponse {
     slug: string;
     price: number;
     category: string | null;
+    categories?: string[];
   }>;
 }
 
@@ -461,16 +467,17 @@ export class App {
   serviceForm = {
     provider_id: '',
     category_id: '',
+    category_ids: [] as string[],
     title: '',
-    short_description: '',
     description: '',
     price: 0,
-    price_type: 'fixed',
-    duration_minutes: 60,
+    price_type: '',
+    duration_minutes: 0,
     is_active: true,
   };
 
   serviceFormFile: File | null = null;
+  serviceCategoryExpanded: Record<number, boolean> = {};
   dashboardActionLoading = '';
   dashboardCategoryForm = {
     name: '',
@@ -684,6 +691,86 @@ export class App {
 
   formatPhone(phone: string): string {
     return phone.replace(/\D+/g, '');
+  }
+
+  toggleServiceCategory(categoryId: number | string): void {
+    const id = String(categoryId);
+    const current = [...this.serviceForm.category_ids];
+    const exists = current.includes(id);
+
+    this.serviceForm.category_ids = exists
+      ? current.filter((value) => value !== id)
+      : [...current, id];
+
+    this.serviceForm.category_id = this.serviceForm.category_ids[0] ?? '';
+  }
+
+  isServiceCategorySelected(categoryId: number | string): boolean {
+    return this.serviceForm.category_ids.includes(String(categoryId));
+  }
+
+  serviceCategoriesLabel(service: { category?: string | null; categories?: string[] }): string {
+    const categories = service.categories?.filter((value) => value && value.trim()) ?? [];
+    if (categories.length > 0) {
+      return categories.join(', ');
+    }
+
+    return service.category?.trim() || 'Uncategorized';
+  }
+
+  serviceCategoryPreview(service: { category?: string | null; categories?: string[] }, limit = 3): string[] {
+    const categories = service.categories?.filter((value) => value && value.trim()) ?? [];
+    if (categories.length > 0) {
+      return categories.slice(0, limit);
+    }
+
+    const fallback = service.category?.trim();
+    return fallback ? [fallback] : [];
+  }
+
+  serviceCategoryMoreCount(service: { category?: string | null; categories?: string[] }, limit = 3): number {
+    const categories = service.categories?.filter((value) => value && value.trim()) ?? [];
+    return categories.length > limit ? categories.length - limit : 0;
+  }
+
+  isServiceCategoriesExpanded(serviceId: number): boolean {
+    return !!this.serviceCategoryExpanded[serviceId];
+  }
+
+  toggleServiceCategories(serviceId: number): void {
+    this.serviceCategoryExpanded[serviceId] = !this.isServiceCategoriesExpanded(serviceId);
+  }
+
+  hasPositiveNumber(value: number | string | null | undefined): boolean {
+    const numeric = typeof value === 'string' ? Number(value) : value;
+    return typeof numeric === 'number' && Number.isFinite(numeric) && numeric > 0;
+  }
+
+  hasText(value: string | null | undefined): boolean {
+    return typeof value === 'string' && value.trim() !== '';
+  }
+
+  ratingValue(value: number | null | undefined): number {
+    const numeric = typeof value === 'number' ? value : Number(value ?? 0);
+    if (!Number.isFinite(numeric)) {
+      return 0;
+    }
+
+    return Math.max(0, Math.min(5, numeric));
+  }
+
+  reviewsCount(value: number | null | undefined): number {
+    const numeric = typeof value === 'number' ? value : Number(value ?? 0);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return 0;
+    }
+
+    return Math.floor(numeric);
+  }
+
+  ratingStars(value: number | null | undefined): string {
+    const rounded = Math.round(this.ratingValue(value));
+    return `${'★'.repeat(rounded)}${'☆'.repeat(5 - rounded)}`;
   }
 
   backendUrl(path: string): string {
@@ -1015,7 +1102,7 @@ export class App {
     this.http.post<{ data: AiProviderRecommendationsResponse }>(this.backendUrl('/api/ai/provider-recommendations'), {
       problem: detail.service.short_description,
       location: detail.service.provider.city,
-      category_slug: this.slugify(detail.service.category),
+      category_slug: this.slugify((detail.service.categories?.[0] ?? detail.service.category ?? '')),
       budget: detail.service.price,
     }).pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -1034,10 +1121,30 @@ export class App {
     this.authLoading.set(true);
     this.authError.set('');
 
+    if (this.serviceForm.category_ids.length === 0 && !this.serviceForm.category_id) {
+      this.authLoading.set(false);
+      this.authError.set('At least one category select karein.');
+      return;
+    }
+
     const formData = new FormData();
-    Object.entries(this.serviceForm).forEach(([key, value]) => {
-      formData.append(key, String(value));
-    });
+    if (this.isAdminServiceEditPage()) {
+      formData.append('provider_id', this.serviceForm.provider_id);
+    }
+
+    if (this.serviceForm.category_ids.length > 0) {
+      this.serviceForm.category_ids.forEach((categoryId) => formData.append('category_ids[]', categoryId));
+      formData.append('category_id', this.serviceForm.category_ids[0]);
+    } else if (this.serviceForm.category_id) {
+      formData.append('category_id', this.serviceForm.category_id);
+      formData.append('category_ids[]', this.serviceForm.category_id);
+    }
+
+    formData.append('title', this.serviceForm.title);
+    formData.append('description', this.serviceForm.description);
+    formData.append('price', String(this.serviceForm.price));
+    formData.append('price_type', this.serviceForm.price_type);
+    formData.append('duration_minutes', String(this.serviceForm.duration_minutes));
     formData.set('is_active', this.serviceForm.is_active ? '1' : '0');
 
     if (this.serviceFormFile) {
@@ -1228,12 +1335,16 @@ export class App {
           this.serviceForm = {
             provider_id: String(response.service?.provider_id ?? ''),
             category_id: String(response.service?.category_id ?? response.categories[0]?.id ?? ''),
+            category_ids: response.service?.category_ids?.length
+              ? response.service.category_ids.map((id) => String(id))
+              : response.service?.category_id
+              ? [String(response.service.category_id)]
+              : (response.categories[0] ? [String(response.categories[0].id)] : []),
             title: response.service?.title ?? '',
-            short_description: response.service?.short_description ?? '',
             description: response.service?.description ?? '',
             price: response.service?.price ?? 0,
-            price_type: response.service?.price_type ?? 'fixed',
-            duration_minutes: response.service?.duration_minutes ?? 60,
+            price_type: response.service?.price_type ?? '',
+            duration_minutes: response.service?.duration_minutes ?? 0,
             is_active: response.service?.is_active ?? true,
           };
           this.pageLoading.set(false);

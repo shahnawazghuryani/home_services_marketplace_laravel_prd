@@ -196,7 +196,15 @@ TEXT;
             if ($category !== '') {
                 foreach (($provider['services'] ?? []) as $service) {
                     $serviceCategory = strtolower((string) ($service['category_slug'] ?? ''));
-                    if ($serviceCategory !== '' && $serviceCategory === $category) {
+                    $serviceCategorySlugs = array_map(
+                        fn ($slug) => strtolower((string) $slug),
+                        (array) ($service['category_slugs'] ?? [])
+                    );
+
+                    if (
+                        ($serviceCategory !== '' && $serviceCategory === $category)
+                        || in_array($category, $serviceCategorySlugs, true)
+                    ) {
                         $score += 4;
                         break;
                     }
