@@ -7,6 +7,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SpaPageController;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 if (! function_exists('serveSpaResponse')) {
@@ -27,6 +28,45 @@ Route::get('/spa/{any?}', function () {
 
     return response()->file(public_path('spa/index.html'));
 })->where('any', '.*');
+
+Route::get('/_setup/run', function () {
+    $expectedKey = env('DEPLOY_SETUP_KEY');
+    $providedKey = (string) request()->query('key', '');
+
+    abort_unless($expectedKey && hash_equals((string) $expectedKey, $providedKey), 403, 'Invalid setup key.');
+
+    $commands = [
+        'key:generate' => ['--force' => true],
+        'migrate' => ['--force' => true],
+        'db:seed' => ['--class' => 'MarketplaceSeeder', '--force' => true],
+        'storage:link' => [],
+        'optimize:clear' => [],
+        'optimize' => [],
+    ];
+
+    $result = [];
+    foreach ($commands as $command => $options) {
+        try {
+            Artisan::call($command, $options);
+            $result[] = [
+                'command' => $command,
+                'status' => 'ok',
+                'output' => trim(Artisan::output()),
+            ];
+        } catch (\Throwable $exception) {
+            $result[] = [
+                'command' => $command,
+                'status' => 'error',
+                'output' => $exception->getMessage(),
+            ];
+        }
+    }
+
+    return response()->json([
+        'message' => 'Setup route executed. Remove this route after success.',
+        'result' => $result,
+    ]);
+});
 
 Route::get('/services', fn () => serveSpaResponse())->name('services.index');
 Route::get('/services/data', [SpaPageController::class, 'servicesIndex'])->name('services.data');
