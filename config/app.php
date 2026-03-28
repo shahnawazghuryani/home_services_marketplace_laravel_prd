@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'coming_soon' => (bool) env('COMING_SOON', false),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
