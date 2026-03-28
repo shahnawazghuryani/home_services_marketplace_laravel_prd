@@ -1,41 +1,32 @@
 <div class="app-shell" *ngIf="!loading(); else loadingBlock">
   <header class="topbar">
     <div class="container nav">
-      <a class="brand" [href]="homeUrl()">
-        <span class="brand-mark">GK</span>
-        <span class="brand-text">
-          <strong>GharKaam</strong>
-          <small>Pakistan</small>
-        </span>
-      </a>
+      <div class="header-primary">
+        <a class="brand" [href]="homeUrl()">
+          <span class="brand-mark">GK</span>
+          <span class="brand-text">
+            <strong>GharKaam</strong>
+            <small>Pakistan</small>
+          </span>
+        </a>
+      </div>
 
-      <div class="nav-actions">
+      <div class="header-utility">
         <div class="nav-links">
           <a [href]="backendUrl('/services')">{{ t('servicesNav') }}</a>
-          <a [href]="homeUrl('#providers')">{{ t('providersNav') }}</a>
-          <a [href]="backendUrl('/dashboard')">Dashboard</a>
-          @if (showProviderNav()) {
-            <a [href]="backendUrl('/provider/profile/edit')">Provider</a>
-          }
         </div>
 
         <div class="nav-links nav-auth-links">
           @if (isAuthenticatedUiState()) {
             <button type="button" class="btn brand nav-login" (click)="logout()">Logout</button>
           } @else {
-          @if (!isLoginPage()) {
-            <a class="btn secondary nav-login" [href]="backendUrl('/login')">{{ t('login') }}</a>
+            @if (!isLoginPage()) {
+              <a class="btn secondary nav-login" [href]="backendUrl('/login')">{{ t('login') }}</a>
+            }
+            @if (!isRegisterPage()) {
+              <a class="btn brand nav-login" [href]="backendUrl('/register')">{{ t('register') }}</a>
+            }
           }
-          @if (!isRegisterPage()) {
-            <a class="btn brand nav-login" [href]="backendUrl('/register')">{{ t('register') }}</a>
-          }
-          }
-        </div>
-
-        <div class="locale-switcher">
-          <button type="button" class="locale-link" [class.active]="locale() === 'en'" (click)="setLocale('en')">EN</button>
-          <button type="button" class="locale-link" [class.active]="locale() === 'ur'" (click)="setLocale('ur')">اردو</button>
-          <button type="button" class="locale-link" [class.active]="locale() === 'sd'" (click)="setLocale('sd')">سنڌي</button>
         </div>
       </div>
     </div>
@@ -462,6 +453,22 @@
               </div>
             </div>
           </div>
+          <div class="card dashboard-block" style="margin-top:20px;">
+            <h3>Customer reviews</h3>
+            <div class="review-list">
+              @for (review of detail.reviews; track review.customer_name + review.comment) {
+                <div class="review-card">
+                  <div class="review-card-head">
+                    <strong>{{ review.customer_name }}</strong>
+                    <span class="service-review-stars">{{ ratingStars(review.rating) }}</span>
+                  </div>
+                  <div class="muted">{{ review.comment }}</div>
+                </div>
+              } @empty {
+                <div class="notice">No customer reviews yet.</div>
+              }
+            </div>
+          </div>
         } @else {
           <div class="flash error">{{ pageError() || 'Provider details load nahi ho sakin.' }}</div>
         }
@@ -640,7 +647,24 @@
                     <div class="quick-item">
                       <div>
                         <strong>{{ provider.name }}</strong>
-                        <div class="muted">{{ provider.service_area }} - {{ provider.approved ? 'Approved' : 'Pending' }}</div>
+                        <div class="muted">
+                          {{ provider.service_area }} - {{ provider.approved ? 'Approved' : 'Pending' }}
+                          - {{ provider.total_views ?? 0 }} total views
+                          - {{ provider.today_views ?? 0 }} today
+                        </div>
+                        @if ((provider.recent_reviews ?? []).length > 0) {
+                          <div class="review-list compact-review-list">
+                            @for (review of provider.recent_reviews ?? []; track review.customer_name + review.comment) {
+                              <div class="review-card">
+                                <div class="review-card-head">
+                                  <strong>{{ review.customer_name }}</strong>
+                                  <span class="service-review-stars">{{ ratingStars(review.rating) }}</span>
+                                </div>
+                                <div class="muted">{{ review.comment }}</div>
+                              </div>
+                            }
+                          </div>
+                        }
                       </div>
                       <button class="btn secondary" type="button" (click)="toggleProviderApproval(provider.approval_url || '', provider.id)" [disabled]="dashboardActionKey('provider-' + provider.id)">{{ provider.approved ? 'Set pending' : 'Approve' }}</button>
                     </div>
@@ -705,16 +729,37 @@
                         <strong>{{ booking['customer'] }}</strong>
                         <div class="muted">{{ booking['service'] }} - {{ booking['schedule'] }} - {{ booking['status'] }}</div>
                       </div>
-                      <form class="status-form" (ngSubmit)="updateBookingStatus($any(booking['status_url']), $any(booking['id']))">
-                        <select [name]="'provider_status_' + booking['id']" [(ngModel)]="$any(providerBookingStatus[$any(booking['id'])])">
-                          <option value="accepted">Accept</option>
-                          <option value="rejected">Reject</option>
-                          <option value="in_progress">In progress</option>
-                          <option value="completed">Completed</option>
-                        </select>
-                        <button class="btn brand" type="submit" [disabled]="dashboardActionKey('booking-' + booking['id'])">Save</button>
-                      </form>
+                      @if (booking['status'] === 'completed' || booking['status'] === 'rejected' || booking['status'] === 'cancelled') {
+                        <span class="badge">{{ booking['status'] }}</span>
+                      } @else {
+                        <form class="status-form" (ngSubmit)="updateBookingStatus($any(booking['status_url']), $any(booking['id']))">
+                          <select [name]="'provider_status_' + booking['id']" [(ngModel)]="$any(providerBookingStatus[$any(booking['id'])])">
+                            <option value="accepted">Accept</option>
+                            <option value="rejected">Reject</option>
+                            <option value="in_progress">In progress</option>
+                            <option value="completed">Completed</option>
+                          </select>
+                          <button class="btn brand" type="submit" [disabled]="dashboardActionKey('booking-' + booking['id'])">Save</button>
+                        </form>
+                      }
                     </div>
+                  }
+                </div>
+              </section>
+
+              <section class="card dashboard-block">
+                <h3>Customer reviews</h3>
+                <div class="review-list">
+                  @for (review of dash.reviews ?? []; track review.customer_name + review.comment) {
+                    <div class="review-card">
+                      <div class="review-card-head">
+                        <strong>{{ review.customer_name }}</strong>
+                        <span class="service-review-stars">{{ ratingStars(review.rating) }}</span>
+                      </div>
+                      <div class="muted">{{ review.comment }}</div>
+                    </div>
+                  } @empty {
+                    <div class="notice">No customer reviews yet.</div>
                   }
                 </div>
               </section>
@@ -747,14 +792,25 @@
                       </div>
                       @if (booking['status'] === 'pending') {
                         <button class="btn danger" type="button" (click)="cancelBooking($any(booking['cancel_url']), $any(booking['id']))" [disabled]="dashboardActionKey('cancel-' + booking['id'])">Cancel</button>
-                      } @else if (booking['status'] === 'completed' && !booking['has_review']) {
+                      } @else if (booking['can_review']) {
                         <form class="review-form" (ngSubmit)="submitReview($any(booking['review_url']), $any(booking['id']))">
-                          <input type="number" min="1" max="5" [name]="'rating_' + booking['id']" [(ngModel)]="$any(customerReview[$any(booking['id'])]).rating" required>
+                          <div class="review-stars" [attr.aria-label]="'Rating for booking ' + booking['id']">
+                            @for (star of reviewStarOptions(); track star) {
+                              <button
+                                type="button"
+                                class="review-star-btn"
+                                [class.active]="star <= $any(customerReview[$any(booking['id'])]).rating"
+                                (click)="setCustomerReviewRating($any(booking['id']), star)"
+                                [attr.aria-label]="'Rate ' + star + ' stars'">
+                                ★
+                              </button>
+                            }
+                          </div>
                           <textarea [name]="'comment_' + booking['id']" [(ngModel)]="$any(customerReview[$any(booking['id'])]).comment" placeholder="Share your feedback" required></textarea>
-                          <button class="btn brand" type="submit" [disabled]="dashboardActionKey('review-' + booking['id'])">Submit review</button>
+                          <button class="btn brand" type="submit" [disabled]="dashboardActionKey('review-' + booking['id'])">{{ booking['has_review'] ? 'Update review' : 'Submit review' }}</button>
                         </form>
                       } @else {
-                        <span class="badge">No action</span>
+                        <span class="badge">{{ booking['status'] === 'cancelled' ? 'Cancelled' : 'Waiting for provider update' }}</span>
                       }
                     </div>
                   }
@@ -883,25 +939,7 @@
           <div class="auth-showcase">
             <span class="kicker">{{ isLoginPage() ? 'Login' : 'Register' }}</span>
             <h2>{{ isLoginPage() ? 'Login karke apna dashboard instantly open karein.' : 'Customer ya provider account asani se create karein.' }}</h2>
-            <p>{{ isLoginPage() ? 'Admin approvals, provider service management, customer bookings, aur reviews sab ek hi workflow me available hain.' : 'Basic details fill karein. Provider role select karne par extra professional profile fields bhi yahin mil jayengi.' }}</p>
-
-            <div class="credentials-grid" style="margin-top:22px;">
-              <div class="credential">
-                <strong>Admin</strong>
-                <div>admin@homeservices.test</div>
-                <div>Password: password</div>
-              </div>
-              <div class="credential">
-                <strong>Customer</strong>
-                <div>customer@homeservices.test</div>
-                <div>Password: password</div>
-              </div>
-              <div class="credential">
-                <strong>Provider</strong>
-                <div>provider1@homeservices.test</div>
-                <div>Password: password</div>
-              </div>
-            </div>
+            <p>{{ isLoginPage() ? 'Admin approvals, provider service management, customer bookings, aur reviews sab ek hi workflow me available hain.' : 'Quick signup ke baad aap turant services explore ya apna professional account setup kar sakte hain.' }}</p>
           </div>
 
           <div class="auth-card">
@@ -928,6 +966,8 @@
               </div>
             } @else {
               <form (ngSubmit)="submitRegister()" style="margin-top:18px;">
+                <div class="form-section auth-section">
+                  <div class="form-section-title">Basic details</div>
                 <div class="grid grid-2">
                   <label>Full name<input type="text" name="name" [(ngModel)]="registerForm.name" placeholder="Enter full name" required></label>
                   <label>Email<input type="email" name="email" [(ngModel)]="registerForm.email" placeholder="Enter email" required></label>
@@ -937,14 +977,22 @@
                   <label>Address<input type="text" name="address" [(ngModel)]="registerForm.address" placeholder="Street, area, city" required></label>
                   <label>Password<input type="password" name="password" [(ngModel)]="registerForm.password" placeholder="Create password" required></label>
                   <label>Confirm password<input type="password" name="password_confirmation" [(ngModel)]="registerForm.password_confirmation" placeholder="Repeat password" required></label>
-                  <label>Service area<input type="text" name="service_area" [(ngModel)]="registerForm.service_area" placeholder="DHA, Gulshan, Clifton"></label>
-                  <label>Experience years<input type="number" name="experience_years" [(ngModel)]="registerForm.experience_years"></label>
-                  <label>Hourly rate<input type="number" name="hourly_rate" [(ngModel)]="registerForm.hourly_rate"></label>
-                  <label>Availability<input type="text" name="availability" [(ngModel)]="registerForm.availability" placeholder="Mon-Sat, 10 AM - 7 PM"></label>
                 </div>
-                <label>Provider bio
-                  <textarea name="bio" [(ngModel)]="registerForm.bio" placeholder="Tell users about your experience and working style"></textarea>
-                </label>
+                </div>
+                @if (registerForm.role === 'provider') {
+                  <div class="form-section auth-section">
+                    <div class="form-section-title">Professional profile</div>
+                    <div class="grid grid-2">
+                      <label>Service area<input type="text" name="service_area" [(ngModel)]="registerForm.service_area" placeholder="DHA, Gulshan, Clifton"></label>
+                      <label>Experience years<input type="number" name="experience_years" [(ngModel)]="registerForm.experience_years"></label>
+                      <label>Hourly rate<input type="number" name="hourly_rate" [(ngModel)]="registerForm.hourly_rate"></label>
+                      <label>Availability<input type="text" name="availability" [(ngModel)]="registerForm.availability" placeholder="Mon-Sat, 10 AM - 7 PM"></label>
+                    </div>
+                    <label>Provider bio
+                      <textarea name="bio" [(ngModel)]="registerForm.bio" placeholder="Tell users about your experience and working style"></textarea>
+                    </label>
+                  </div>
+                }
                 <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : 'Create account' }}</button>
               </form>
             }
@@ -963,3 +1011,4 @@
     </div>
   </div>
 </ng-template>
+

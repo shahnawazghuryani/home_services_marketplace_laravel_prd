@@ -115,6 +115,13 @@ interface DashboardData {
     name: string;
     service_area: string;
     approved: boolean;
+    total_views?: number;
+    today_views?: number;
+    recent_reviews?: Array<{
+      rating: number;
+      comment: string;
+      customer_name: string;
+    }>;
     approval_url?: string;
   }>;
   adminCategories?: Array<{
@@ -126,7 +133,7 @@ interface DashboardData {
     delete_url: string;
   }>;
   services?: Array<Record<string, string | number>>;
-  bookings?: Array<Record<string, string | number>>;
+  bookings?: Array<Record<string, string | number | boolean | { rating: number; comment: string } | null>>;
   categories?: Array<{
     name: string;
     count: number;
@@ -142,6 +149,11 @@ interface DashboardData {
     edit_profile_url?: string;
     add_service_url?: string;
   };
+  reviews?: Array<{
+    rating: number;
+    comment: string;
+    customer_name: string;
+  }>;
 }
 
 interface ProviderProfileData {
@@ -235,6 +247,11 @@ interface ProviderDetailResponse {
     category: string | null;
     categories?: string[];
   }>;
+  reviews: Array<{
+    rating: number;
+    comment: string;
+    customer_name: string;
+  }>;
 }
 
 interface BookingCreateResponse {
@@ -281,7 +298,7 @@ type CopyMap = Record<LocaleKey, Record<string, string>>;
 
 const COPY: CopyMap = {
   en: {
-    servicesNav: 'Services Live Now',
+    servicesNav: 'Services',
     providersNav: 'Providers',
     login: 'Login',
     register: 'Register',
@@ -309,7 +326,7 @@ const COPY: CopyMap = {
     whatsapp: 'WhatsApp',
     viewDetails: 'View details',
     loading: 'Loading GharKaam...',
-    loadingText: 'One-page Angular app is connecting to Laravel API.',
+    loadingText: '',
     currentLocation: 'Current location',
     detecting: 'Detecting your location...',
     currentLocationLabel: 'Current location',
@@ -345,7 +362,7 @@ const COPY: CopyMap = {
     whatsapp: 'واٹس ایپ',
     viewDetails: 'تفصیل',
     loading: 'گھرکام لوڈ ہو رہا ہے...',
-    loadingText: 'ون پیج اینگولر ایپ لاراول API سے کنیکٹ ہو رہی ہے۔',
+    loadingText: '',
     currentLocation: 'موجودہ لوکیشن',
     detecting: 'لوکیشن معلوم کی جا رہی ہے...',
     currentLocationLabel: 'موجودہ لوکیشن',
@@ -381,7 +398,7 @@ const COPY: CopyMap = {
     whatsapp: 'واٽس ايپ',
     viewDetails: 'تفصيل',
     loading: 'گهرڪام لوڊ ٿي رهيو آهي...',
-    loadingText: 'ون پيج اينگولر ايپ لاراول API سان ڳنڍجي رهي آهي۔',
+    loadingText: '',
     currentLocation: 'هاڻوڪي جڳهه',
     detecting: 'لوڪيشن معلوم ٿي رهي آهي...',
     currentLocationLabel: 'هاڻوڪي جڳهه',
@@ -600,7 +617,11 @@ export class App {
   }
 
   homeUrl(fragment = ''): string {
-    return this.backendUrl('/' + fragment);
+    if (!fragment) {
+      return this.backendUrl('/');
+    }
+
+    return `${this.backendUrl('/')}${fragment}`;
   }
 
   loginUrl(redirectTo?: string): string {
@@ -635,7 +656,7 @@ export class App {
     if (this.category().trim()) params.set('category', this.category().trim());
 
     const query = params.toString();
-    const url = '/api/landing' + (query ? `?${query}` : '');
+    const url = this.backendUrl('/api/landing') + (query ? `?${query}` : '');
 
     this.loading.set(true);
     this.error.set('');
@@ -773,6 +794,21 @@ export class App {
     return `${'★'.repeat(rounded)}${'☆'.repeat(5 - rounded)}`;
   }
 
+  reviewStarOptions(): number[] {
+    return [1, 2, 3, 4, 5];
+  }
+
+  setCustomerReviewRating(bookingId: number, rating: number): void {
+    if (!this.customerReview[bookingId]) {
+      this.customerReview[bookingId] = {
+        rating: 5,
+        comment: '',
+      };
+    }
+
+    this.customerReview[bookingId].rating = rating;
+  }
+
   backendUrl(path: string): string {
     return `${this.backendOrigin}${path}`;
   }
@@ -854,8 +890,8 @@ export class App {
             if (id) {
               this.providerBookingStatus[id] = String(booking['status'] ?? 'accepted');
               this.customerReview[id] = {
-                rating: 5,
-                comment: '',
+                rating: Number((booking['review'] as { rating?: number } | null)?.rating ?? 5),
+                comment: String((booking['review'] as { comment?: string } | null)?.comment ?? ''),
               };
             }
           });
@@ -1234,7 +1270,15 @@ export class App {
       return '/';
     }
 
-    return window.location.pathname;
+    const path = window.location.pathname;
+    const basePath = this.detectAppBasePath();
+
+    if (basePath !== '' && path.startsWith(basePath)) {
+      const trimmed = path.slice(basePath.length);
+      return this.normalizeSpaPath(trimmed);
+    }
+
+    return this.normalizeSpaPath(path);
   }
 
   private hydrateFiltersFromQuery(): void {
@@ -1274,10 +1318,45 @@ export class App {
     }
 
     if (window.location.port === '4200') {
-      return 'http://127.0.0.1:8000';
+      return `${window.location.protocol}//${window.location.hostname}${this.detectAppBasePath(true)}`;
     }
 
-    return window.location.origin;
+    return `${window.location.origin}${this.detectAppBasePath()}`;
+  }
+
+  private detectAppBasePath(forceLocalProjectPath = false): string {
+    if (typeof window === 'undefined') {
+      return '';
+    }
+
+    if (forceLocalProjectPath) {
+      return '/home_services_marketplace_laravel_prd/public';
+    }
+
+    const path = window.location.pathname;
+    const publicIndex = path.indexOf('/public');
+
+    if (publicIndex !== -1) {
+      return path.slice(0, publicIndex + '/public'.length);
+    }
+
+    return '';
+  }
+
+  private normalizeSpaPath(path: string): string {
+    if (!path || path === '/') {
+      return '/';
+    }
+
+    if (path === '/spa' || path === '/spa/') {
+      return '/';
+    }
+
+    if (path.startsWith('/spa/')) {
+      return path.slice('/spa'.length);
+    }
+
+    return path;
   }
 
   private loadAuthState(): void {

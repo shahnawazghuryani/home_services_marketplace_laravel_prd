@@ -13,8 +13,23 @@ use Illuminate\Support\Facades\Route;
 if (! function_exists('serveSpaResponse')) {
     function serveSpaResponse()
     {
-        if (file_exists(public_path('spa/index.html'))) {
-            return response()->file(public_path('spa/index.html'));
+        $spaIndexPath = public_path('spa/index.html');
+
+        if (file_exists($spaIndexPath)) {
+            $html = file_get_contents($spaIndexPath);
+            $basePath = rtrim(request()->getBaseUrl(), '/');
+            $baseHref = ($basePath !== '' ? $basePath : '') . '/spa/';
+
+            if ($html !== false) {
+                $html = preg_replace(
+                    '#<base href="[^"]*">#',
+                    '<base href="' . e($baseHref) . '">',
+                    $html,
+                    1
+                );
+
+                return response($html, 200)->header('Content-Type', 'text/html; charset=UTF-8');
+            }
         }
 
         return app(HomeController::class)->index(request());
@@ -23,10 +38,14 @@ if (! function_exists('serveSpaResponse')) {
 
 Route::get('/', fn () => serveSpaResponse())->name('home');
 
-Route::get('/spa/{any?}', function () {
-    abort_unless(file_exists(public_path('spa/index.html')), 404);
+Route::get('/spa/{any?}', function (?string $any = null) {
+    $target = '/' . ltrim((string) $any, '/');
 
-    return response()->file(public_path('spa/index.html'));
+    if ($target === '/') {
+        return redirect()->route('home');
+    }
+
+    return redirect($target);
 })->where('any', '.*');
 
 Route::get('/_setup/run', function () {

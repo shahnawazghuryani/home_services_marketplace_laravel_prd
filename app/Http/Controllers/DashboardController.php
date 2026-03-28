@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Category;
 use App\Models\MarketplaceNotification;
 use App\Models\Provider;
+use App\Models\Review;
 use App\Models\Service;
 use App\Models\User;
 use App\Models\WebsiteVisit;
@@ -93,6 +94,12 @@ class DashboardController extends Controller
                 'visits' => WebsiteVisit::count(),
                 'unique_visitors' => WebsiteVisit::query()->distinct('visitor_key')->count('visitor_key'),
             ];
+            $providerVisitSummary = $this->providerVisitSummaryMap();
+            $providerRecentReviews = Review::query()
+                ->with(['customer:id,name'])
+                ->latest()
+                ->get()
+                ->groupBy('provider_id');
 
             return response()->json([
                 'role' => 'admin',
@@ -120,13 +127,29 @@ class DashboardController extends Controller
                         'visited_at' => optional($visit->visited_at)->format('d M Y, h:i A'),
                     ]),
                 ],
-                'providers' => Provider::with('user')->latest()->get()->map(fn ($provider) => [
-                    'id' => $provider->id,
-                    'name' => $provider->user->name,
-                    'service_area' => $provider->service_area,
-                    'approved' => (bool) $provider->approved_at,
-                    'approval_url' => route('admin.providers.approve', $provider),
-                ]),
+                'providers' => Provider::with('user')->latest()->get()->map(function ($provider) use ($providerVisitSummary, $providerRecentReviews) {
+                    $visitSummary = $providerVisitSummary[$provider->id] ?? ['total_views' => 0, 'today_views' => 0];
+                    $recentReviews = ($providerRecentReviews->get($provider->user_id) ?? collect())
+                        ->take(3)
+                        ->map(fn ($review) => [
+                            'rating' => (int) $review->rating,
+                            'comment' => $review->comment,
+                            'customer_name' => $review->customer?->name ?? 'Customer',
+                        ])
+                        ->values()
+                        ->all();
+
+                    return [
+                        'id' => $provider->id,
+                        'name' => $provider->user->name,
+                        'service_area' => $provider->service_area,
+                        'approved' => (bool) $provider->approved_at,
+                        'total_views' => (int) $visitSummary['total_views'],
+                        'today_views' => (int) $visitSummary['today_views'],
+                        'recent_reviews' => $recentReviews,
+                        'approval_url' => route('admin.providers.approve', $provider),
+                    ];
+                }),
                 'adminCategories' => Category::latest()->get()->map(fn ($category) => [
                     'id' => $category->id,
                     'name' => $category->name,
@@ -158,6 +181,9 @@ class DashboardController extends Controller
             $services = Service::with(['category', 'categories'])->where('provider_id', $profile?->id)->latest()->get();
             $bookings = Booking::with(['customer', 'service'])->where('provider_id', $user->id)->latest()->get();
             $trafficSummary = $this->providerTrafficSummary($profile?->id);
+            $reviews = $profile
+                ? $profile->reviews()->with(['customer:id,name'])->latest()->get()
+                : collect();
 
             return response()->json([
                 'role' => 'provider',
@@ -209,6 +235,11 @@ class DashboardController extends Controller
                     'status' => $booking->status,
                     'status_url' => route('bookings.status', $booking),
                 ]),
+                'reviews' => $reviews->map(fn ($review) => [
+                    'rating' => (int) $review->rating,
+                    'comment' => $review->comment,
+                    'customer_name' => $review->customer?->name ?? 'Customer',
+                ])->values(),
             ]);
         }
 
@@ -234,16 +265,25 @@ class DashboardController extends Controller
                 'count' => $category->services_count,
                 'url' => route('home', ['category' => $category->slug]) . '#services',
             ]),
-            'bookings' => $bookings->map(fn ($booking) => [
-                'id' => $booking->id,
-                'service' => $booking->service->title,
-                'provider' => $booking->provider->name,
-                'schedule' => optional($booking->scheduled_at)->format('d M Y, h:i A'),
-                'status' => $booking->status,
-                'cancel_url' => route('bookings.status', $booking),
-                'review_url' => route('bookings.reviews.store', $booking),
-                'has_review' => $booking->reviews->count() > 0,
-            ]),
+            'bookings' => $bookings->map(function ($booking) {
+                $review = $booking->reviews->first();
+
+                return [
+                    'id' => $booking->id,
+                    'service' => $booking->service->title,
+                    'provider' => $booking->provider->name,
+                    'schedule' => optional($booking->scheduled_at)->format('d M Y, h:i A'),
+                    'status' => $booking->status,
+                    'cancel_url' => route('bookings.status', $booking),
+                    'review_url' => route('bookings.reviews.store', $booking),
+                    'has_review' => (bool) $review,
+                    'can_review' => $booking->status === 'completed',
+                    'review' => $review ? [
+                        'rating' => $review->rating,
+                        'comment' => $review->comment,
+                    ] : null,
+                ];
+            }),
         ]);
     }
 
@@ -561,5 +601,24 @@ class DashboardController extends Controller
                 ->orderByDesc('total')
                 ->value('source') ?? 'Direct',
         ];
+    }
+
+    protected function providerVisitSummaryMap(): array
+    {
+        return WebsiteVisit::query()
+            ->selectRaw(
+                'provider_id, COUNT(*) as total_views, SUM(CASE WHEN DATE(visited_at) = ? THEN 1 ELSE 0 END) as today_views',
+                [today()->toDateString()]
+            )
+            ->whereNotNull('provider_id')
+            ->groupBy('provider_id')
+            ->get()
+            ->mapWithKeys(fn ($item) => [
+                (int) $item->provider_id => [
+                    'total_views' => (int) $item->total_views,
+                    'today_views' => (int) $item->today_views,
+                ],
+            ])
+            ->all();
     }
 }

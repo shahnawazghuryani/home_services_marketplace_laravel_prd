@@ -175,6 +175,15 @@ class SpaPageController extends Controller
                 'category' => $service->category?->name,
                 'categories' => $service->categories->pluck('name')->values()->all(),
             ]),
+            'reviews' => $provider->reviews
+                ->sortByDesc('id')
+                ->take(6)
+                ->map(fn ($review) => [
+                    'rating' => (int) $review->rating,
+                    'comment' => $review->comment,
+                    'customer_name' => $review->customer?->name ?? 'Customer',
+                ])
+                ->values(),
         ]);
     }
 

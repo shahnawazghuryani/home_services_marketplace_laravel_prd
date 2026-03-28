@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.json",
-    "build": "ng build --base-href /spa/ && node scripts/postbuild.mjs",
+    "build": "ng build --base-href /home_services_marketplace_laravel_prd/public/spa/ && node scripts/postbuild.mjs",
     "watch": "ng build --watch --configuration development --base-href /",
     "test": "ng test"
   },

@@ -16,7 +16,7 @@
         <div class="auth-card">
             <span class="badge">Registration</span>
             <h1>Create your account</h1>
-            <p class="muted">Basic details fill karein. Agar role provider select karte hain to neeche professional profile details bhi add kar sakte hain.</p>
+            <p class="muted">Customer ya provider account create karne ke liye neeche form fill karein.</p>
             <form method="POST" action="{{ route('register.store') }}">
                 @csrf
                 <div class="form-section">

@@ -89,7 +89,7 @@ class LandingController extends Controller
             ->get()
             ->keyBy('provider_id');
 
-        $services = $servicesQuery->latest()->take(9)->get()->map(function ($service) {
+        $services = $servicesQuery->latest()->take(9)->get()->map(function ($service) use ($providerRatings) {
             return [
                 'id' => $service->id,
                 'title' => $service->title,
@@ -252,3 +252,4 @@ class LandingController extends Controller
             ->all();
     }
 }
+

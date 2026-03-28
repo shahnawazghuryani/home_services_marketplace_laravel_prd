@@ -7,22 +7,10 @@
             <span class="kicker">Quick Access</span>
             <h2>Login karke apna dashboard instantly open karein.</h2>
             <p>Admin approvals, provider service management, customer bookings, aur reviews sab ek hi clean workflow ke andar available hain.</p>
-            <div class="credentials-grid" style="margin-top:22px;">
-                <div class="credential">
-                    <strong>Admin</strong>
-                    <div>Email: admin@homeservices.test</div>
-                    <div>Password: password</div>
-                </div>
-                <div class="credential">
-                    <strong>Customer</strong>
-                    <div>Email: customer@homeservices.test</div>
-                    <div>Password: password</div>
-                </div>
-                <div class="credential">
-                    <strong>Provider</strong>
-                    <div>Email: provider1@homeservices.test</div>
-                    <div>Password: password</div>
-                </div>
+            <div class="list" style="margin-top:22px;">
+                <div class="notice">Customer login se booking history aur reviews manage karein.</div>
+                <div class="notice">Provider login se services aur incoming bookings control karein.</div>
+                <div class="notice">Admin login se approvals, services, aur platform monitoring handle karein.</div>
             </div>
         </div>
 
