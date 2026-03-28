@@ -281,7 +281,7 @@ type CopyMap = Record<LocaleKey, Record<string, string>>;
 
 const COPY: CopyMap = {
   en: {
-    servicesNav: 'Services',
+    servicesNav: 'Services Live',
     providersNav: 'Providers',
     login: 'Login',
     register: 'Register',

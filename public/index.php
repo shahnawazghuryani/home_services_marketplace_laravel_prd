@@ -1,6 +1,5 @@
 <?php
-echo "test";
-exit();
+
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 
