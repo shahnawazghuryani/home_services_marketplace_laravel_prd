@@ -23,7 +23,6 @@ Route::post('/deploy/webhook', function () {
         'migrate' => ['--force' => true],
         'storage:link' => [],
         'optimize:clear' => [],
-        'optimize' => [],
     ];
 
     $result = [];
