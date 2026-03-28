@@ -124,3 +124,4 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/bookings/{booking}/status', [BookingController::class, 'updateStatus'])->name('bookings.status');
 });
+   3   4
