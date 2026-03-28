@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve --proxy-config proxy.conf.json",
-    "build": "ng build --base-href /spa/ && powershell -NoProfile -Command \"Copy-Item -Path ..\\public\\spa\\browser\\* -Destination ..\\public\\spa -Recurse -Force\"",
+    "build": "ng build --base-href /spa/ && node scripts/postbuild.mjs",
     "watch": "ng build --watch --configuration development --base-href /",
     "test": "ng test"
   },
