@@ -1,0 +1,81 @@
+name: Deploy To cPanel
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Angular App
+        working-directory: frontend
+        run: npm run build
+
+      - name: Prepare App Payload
+        run: |
+          mkdir -p deploy_app deploy_public
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.tools' \
+            --exclude='frontend' \
+            --exclude='node_modules' \
+            --exclude='vendor' \
+            --exclude='deploy_bundle' \
+            --exclude='.env' \
+            --exclude='public/storage' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/data/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            ./ deploy_app/
+          rsync -av ./public/ deploy_public/
+
+      - name: Upload Laravel App
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.CPANEL_FTP_HOST }}
+          username: ${{ secrets.CPANEL_FTP_USERNAME }}
+          password: ${{ secrets.CPANEL_FTP_PASSWORD }}
+          protocol: ftp
+          local-dir: ./deploy_app/
+          server-dir: gharkaam_app/
+          dangerous-clean-slate: false
+
+      - name: Upload Public Files
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.CPANEL_FTP_HOST }}
+          username: ${{ secrets.CPANEL_FTP_USERNAME }}
+          password: ${{ secrets.CPANEL_FTP_PASSWORD }}
+          protocol: ftp
+          local-dir: ./deploy_public/
+          server-dir: public_html/
+          dangerous-clean-slate: false
+
+      - name: Run Post-Deploy Webhook
+        env:
+          DEPLOY_WEBHOOK_SECRET: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}
+        run: |
+          curl --fail --show-error --silent \
+            -X POST \
+            -H "X-Deploy-Secret: ${DEPLOY_WEBHOOK_SECRET}" \
+            https://gharkaam.pk/api/deploy/webhook
