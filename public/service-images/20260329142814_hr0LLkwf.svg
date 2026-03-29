@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-label="Mere Pass Plumber Aur Electr">
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#f5efe3"/>
+      <stop offset="50%" stop-color="#dfe8f6"/>
+      <stop offset="100%" stop-color="#d7f0e5"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#bg)"/>
+  <circle cx="950" cy="140" r="120" fill="#ffffff" fill-opacity="0.45"/>
+  <circle cx="220" cy="650" r="180" fill="#ffffff" fill-opacity="0.28"/>
+  <rect x="110" y="110" width="980" height="580" rx="42" fill="#ffffff" fill-opacity="0.72"/>
+  <rect x="160" y="170" width="170" height="170" rx="34" fill="#183153" fill-opacity="0.92"/>
+  <path d="M220 210c-30 0-54 24-54 54s24 54 54 54 54-24 54-54-24-54-54-54zm0 20c19 0 34 15 34 34s-15 34-34 34-34-15-34-34 15-34 34-34z" fill="#f5efe3"/>
+  <path d="M202 286l-30 55h22l18-32 18 32h22l-30-55z" fill="#f5efe3"/>
+  <text x="390" y="255" font-family="Segoe UI, Arial, sans-serif" font-size="60" font-weight="700" fill="#183153">Mere Pass Plumber Aur Electr</text>
+  <text x="390" y="320" font-family="Segoe UI, Arial, sans-serif" font-size="28" fill="#355070">Soft clean marketplace card for Electrical service</text>
+  <rect x="390" y="390" width="300" height="20" rx="10" fill="#8fb8a8"/>
+  <rect x="390" y="430" width="420" height="20" rx="10" fill="#b7c9e2"/>
+  <rect x="390" y="470" width="370" height="20" rx="10" fill="#e0b97a"/>
+  <rect x="390" y="540" width="190" height="64" rx="18" fill="#183153"/>
+  <text x="485" y="582" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" fill="#ffffff">Ready</text>
+</svg>

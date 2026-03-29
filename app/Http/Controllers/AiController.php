@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Provider;
 use App\Services\AI\MarketplaceAiService;
 use Illuminate\Http\JsonResponse;
@@ -109,6 +110,32 @@ class AiController extends Controller
                 'providers' => $recommendedProviders,
             ],
         ]);
+    }
+
+    public function providerServiceBuilder(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'prompt' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $categories = Category::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug'])
+            ->map(fn (Category $category) => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+            ])
+            ->values()
+            ->all();
+
+        try {
+            return response()->json([
+                'data' => $this->ai->providerServiceBuilder($data, $categories),
+            ]);
+        } catch (RuntimeException $exception) {
+            return $this->errorResponse($exception);
+        }
     }
 
     private function errorResponse(RuntimeException $exception): JsonResponse

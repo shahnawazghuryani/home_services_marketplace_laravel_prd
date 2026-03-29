@@ -206,6 +206,21 @@ interface ServiceFormData {
   providers?: Array<{ id: number; name: string }>;
 }
 
+interface AiServiceBuilderResponse {
+  title: string;
+  short_description: string;
+  description: string;
+  price: number;
+  price_type: string;
+  duration_minutes: number;
+  suggested_category_ids: number[];
+  image_prompt: string;
+  generated_image_svg: string;
+  image_preview_url: string;
+  tags: string[];
+  source_prompt: string;
+}
+
 interface ServicesIndexResponse {
   services: ServiceItem[];
   categories: Array<{ id: number; name: string; slug: string }>;
@@ -460,6 +475,7 @@ export class App {
   readonly aiProviderLoading = signal(false);
   readonly aiProviderResult = signal<AiProviderRecommendationsResponse | null>(null);
   readonly authState = signal<AuthStateResponse>({ logged_in: false, role: null });
+  readonly mobileNavOpen = signal(false);
 
   loginForm = {
     email: '',
@@ -501,6 +517,7 @@ export class App {
     category_id: '',
     category_ids: [] as string[],
     title: '',
+    short_description: '',
     description: '',
     price: 0,
     price_type: '',
@@ -509,6 +526,11 @@ export class App {
   };
 
   serviceFormFile: File | null = null;
+  serviceBuilderPrompt = '';
+  generatedServiceImageSvg = '';
+  generatedServiceImagePreview = '';
+  readonly aiServiceBuilderLoading = signal(false);
+  readonly aiServiceBuilderResult = signal<AiServiceBuilderResponse | null>(null);
   serviceCategoryExpanded: Record<number, boolean> = {};
   dashboardActionLoading = '';
   dashboardCategoryForm = {
@@ -560,6 +582,14 @@ export class App {
 
   setLocale(locale: LocaleKey): void {
     this.applyLocale(locale);
+  }
+
+  toggleMobileNav(): void {
+    this.mobileNavOpen.update((open) => !open);
+  }
+
+  closeMobileNav(): void {
+    this.mobileNavOpen.set(false);
   }
 
   isHomePage(): boolean {
@@ -652,7 +682,7 @@ export class App {
   }
 
   supportPhone(): string {
-    return this.dashboard()?.support?.phone || '+92 300 0000000';
+    return this.dashboard()?.support?.phone || '03083259933';
   }
 
   supportPhoneDial(): string {
@@ -660,7 +690,7 @@ export class App {
   }
 
   supportWhatsAppNumber(): string {
-    return this.dashboard()?.support?.whatsapp || '923000000000';
+    return this.dashboard()?.support?.whatsapp || '923083259933';
   }
 
   supportWhatsAppUrl(): string {
@@ -914,6 +944,10 @@ export class App {
   onServiceFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.serviceFormFile = input.files?.[0] ?? null;
+    if (this.serviceFormFile) {
+      this.generatedServiceImageSvg = '';
+      this.generatedServiceImagePreview = '';
+    }
   }
 
   loadDashboard(): void {
@@ -1204,6 +1238,46 @@ export class App {
       });
   }
 
+  runAiServiceBuilder(): void {
+    const prompt = this.serviceBuilderPrompt.trim();
+
+    if (!prompt) {
+      this.authError.set('Provider prompt likhein, jaise plumber, electrical, AC service.');
+      return;
+    }
+
+    this.aiServiceBuilderLoading.set(true);
+    this.authError.set('');
+
+    this.http.post<{ data: AiServiceBuilderResponse }>(this.backendUrl('/api/ai/service-builder'), {
+      prompt,
+    }, {
+      headers: this.authHeaders(),
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          const draft = response.data;
+          this.aiServiceBuilderResult.set(draft);
+          this.serviceForm.title = draft.title;
+          this.serviceForm.short_description = draft.short_description;
+          this.serviceForm.description = draft.description;
+          this.serviceForm.price = draft.price;
+          this.serviceForm.price_type = draft.price_type || 'fixed';
+          this.serviceForm.duration_minutes = draft.duration_minutes;
+          this.serviceForm.category_ids = draft.suggested_category_ids.map((id) => String(id));
+          this.serviceForm.category_id = this.serviceForm.category_ids[0] ?? '';
+          this.generatedServiceImageSvg = draft.generated_image_svg;
+          this.generatedServiceImagePreview = draft.image_preview_url;
+          this.serviceFormFile = null;
+          this.aiServiceBuilderLoading.set(false);
+        },
+        error: (error) => {
+          this.aiServiceBuilderLoading.set(false);
+          this.authError.set(error?.error?.message ?? 'AI service builder temporarily unavailable hai. Please dobara try karein.');
+        }
+      });
+  }
+
   submitServiceForm(): void {
     this.authLoading.set(true);
     this.authError.set('');
@@ -1228,6 +1302,7 @@ export class App {
     }
 
     formData.append('title', this.serviceForm.title);
+    formData.append('short_description', this.serviceForm.short_description);
     formData.append('description', this.serviceForm.description);
     formData.append('price', String(this.serviceForm.price));
     formData.append('price_type', this.serviceForm.price_type);
@@ -1236,6 +1311,8 @@ export class App {
 
     if (this.serviceFormFile) {
       formData.append('image', this.serviceFormFile);
+    } else if (this.generatedServiceImageSvg) {
+      formData.append('generated_image_svg', this.generatedServiceImageSvg);
     }
 
     const isEdit = this.isProviderServiceEditPage() || this.isAdminServiceEditPage();
@@ -1471,12 +1548,17 @@ export class App {
               ? [String(response.service.category_id)]
               : (response.categories[0] ? [String(response.categories[0].id)] : []),
             title: response.service?.title ?? '',
+            short_description: response.service?.short_description ?? '',
             description: response.service?.description ?? '',
             price: response.service?.price ?? 0,
             price_type: response.service?.price_type ?? '',
             duration_minutes: response.service?.duration_minutes ?? 0,
             is_active: response.service?.is_active ?? true,
           };
+          this.serviceBuilderPrompt = '';
+          this.generatedServiceImageSvg = '';
+          this.generatedServiceImagePreview = '';
+          this.aiServiceBuilderResult.set(null);
           this.pageLoading.set(false);
         },
         error: () => {

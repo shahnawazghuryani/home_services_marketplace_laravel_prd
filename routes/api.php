@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/landing', [LandingController::class, 'index']);
 Route::post('/ai/booking-helper', [AiController::class, 'bookingHelper']);
+Route::post('/ai/service-builder', [AiController::class, 'providerServiceBuilder']);
 Route::post('/ai/provider-recommendations', [AiController::class, 'providerRecommendations']);
 
 Route::post('/deploy/webhook', function () {

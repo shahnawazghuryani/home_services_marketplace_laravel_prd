@@ -243,6 +243,7 @@ class ServiceController extends Controller
             'price_type' => ['nullable', Rule::in(['fixed', 'hourly'])],
             'duration_minutes' => ['nullable', 'integer', 'min:0'],
             'image' => ['nullable', 'image', 'max:4096'],
+            'generated_image_svg' => ['nullable', 'string', 'max:30000'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
@@ -279,6 +280,7 @@ class ServiceController extends Controller
         unset($validated['category_ids']);
         $validated['is_active'] = $request->boolean('is_active');
         unset($validated['image']);
+        unset($validated['generated_image_svg']);
 
         return [$validated, $categoryIds];
     }
@@ -300,6 +302,10 @@ class ServiceController extends Controller
     protected function uploadImage(Request $request, ?string $existingPath = null): ?string
     {
         if (! $request->hasFile('image')) {
+            if ($request->filled('generated_image_svg')) {
+                return $this->saveGeneratedSvg((string) $request->input('generated_image_svg'), $existingPath);
+            }
+
             return $existingPath;
         }
 
@@ -314,6 +320,26 @@ class ServiceController extends Controller
         $this->deleteImage($existingPath);
         $filename = now()->format('YmdHis') . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
         $file->move($directory, $filename);
+
+        return 'service-images/' . $filename;
+    }
+
+    protected function saveGeneratedSvg(string $svg, ?string $existingPath = null): ?string
+    {
+        $directory = public_path('service-images');
+        if (! is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        $svg = trim($svg);
+        if ($svg === '' || ! str_starts_with($svg, '<svg')) {
+            return $existingPath;
+        }
+
+        $this->deleteImage($existingPath);
+
+        $filename = now()->format('YmdHis') . '_' . Str::random(8) . '.svg';
+        file_put_contents($directory . DIRECTORY_SEPARATOR . $filename, $svg);
 
         return 'service-images/' . $filename;
     }

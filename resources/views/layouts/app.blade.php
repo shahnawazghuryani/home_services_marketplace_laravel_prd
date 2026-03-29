@@ -17,24 +17,14 @@
                 </span>
             </a>
             <div class="nav-links">
-                <a href="{{ route('home') }}#top">{{ __('site.nav_home') }}</a>
                 <a href="{{ route('home') }}#services">{{ __('site.nav_services') }}</a>
-                <a href="{{ route('home') }}#providers">Providers</a>
-                <a href="{{ route('contact') }}">Help</a>
                 <a href="{{ route('privacy') }}">Privacy</a>
                 <a href="{{ route('terms') }}">Terms</a>
-                @auth
-                    <a href="{{ route('dashboard') }}">{{ __('site.nav_dashboard') }}</a>
-                @endauth
             </div>
             <div class="nav-actions">
-                <div class="locale-switcher" aria-label="{{ __('site.language') }}">
-                    @foreach($supportedLocales as $localeCode => $localeLabel)
-                        <a class="locale-link {{ $currentLocale === $localeCode ? 'active' : '' }}" href="{{ request()->fullUrlWithQuery(['lang' => $localeCode]) }}">{{ $localeLabel }}</a>
-                    @endforeach
-                </div>
                 @auth
-                    <span class="badge">{{ auth()->user()->name }} - {{ auth()->user()->role }}</span>
+                    <span class="badge nav-user-badge">{{ auth()->user()->name }} - {{ auth()->user()->role }}</span>
+                    <a class="btn secondary nav-mini-btn" href="{{ route('dashboard') }}">Dashboard</a>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button class="btn secondary" type="submit">{{ __('site.logout') }}</button>
@@ -65,7 +55,6 @@
                 <div class="muted">Support: {{ $supportContact['email'] }} - {{ $supportContact['phone'] }}</div>
             </div>
             <div class="stack-actions">
-                <a class="btn secondary" href="{{ route('contact') }}">Contact & Help</a>
                 <a class="btn secondary" href="{{ route('privacy') }}">Privacy Policy</a>
                 <a class="btn secondary" href="{{ route('terms') }}">Terms & Conditions</a>
                 <a class="btn brand" target="_blank" rel="noopener" href="https://wa.me/{{ $supportContact['whatsapp'] }}">WhatsApp Support</a>
