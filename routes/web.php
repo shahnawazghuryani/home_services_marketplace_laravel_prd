@@ -141,6 +141,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/categories', [DashboardController::class, 'storeCategory'])->name('categories.store');
         Route::put('/categories/{category}', [DashboardController::class, 'updateCategory'])->name('categories.update');
         Route::delete('/categories/{category}', [DashboardController::class, 'destroyCategory'])->name('categories.destroy');
+        Route::post('/guides', [DashboardController::class, 'storeGuide'])->name('guides.store');
+        Route::post('/guides/{guideVideo}', [DashboardController::class, 'updateGuide'])->name('guides.update');
+        Route::delete('/guides/{guideVideo}', [DashboardController::class, 'destroyGuide'])->name('guides.destroy');
         Route::get('/services/{service}/edit', fn () => serveSpaResponse())->name('services.edit');
         Route::get('/services/{service}/edit/data', [ServiceController::class, 'adminFormData'])->name('services.edit.data');
         Route::put('/services/{service}', [DashboardController::class, 'updateAdminService'])->name('services.update');

@@ -32,8 +32,6 @@
 
         <div class="nav-links">
           <a [href]="backendUrl('/services')" (click)="closeMobileNav()">{{ t('servicesNav') }}</a>
-          <a [href]="privacyUrl()" (click)="closeMobileNav()">Privacy</a>
-          <a [href]="termsUrl()" (click)="closeMobileNav()">Terms</a>
         </div>
 
         <div class="nav-links nav-auth-links">
@@ -63,6 +61,11 @@
                 <option [value]="suggestion"></option>
               }
             </datalist>
+            <datalist id="categorySuggestions">
+              @for (item of view.categories; track item.id) {
+                <option [value]="item.name"></option>
+              }
+            </datalist>
 
             @if (search() || location() || category()) {
               <div class="section-head compact-head">
@@ -72,37 +75,37 @@
 
             <div class="search-shell services-search-shell">
               <div class="search-panel listing-search-panel">
-                <h3>{{ t('searchTitle') }}</h3>
+                <div class="search-panel-top simple">
+                  <div class="search-copy">
+                    <h3>{{ t('searchTitle') }}</h3>
+                    <p>Apni service, location aur category select karke search karein.</p>
+                  </div>
+                </div>
                 @if (authError()) {
                   <div class="flash error">{{ authError() }}</div>
                 }
 
                 <div class="hero-search-grid">
-                  <label>
-                    {{ t('whatNeed') }}
-                    <input
-                      [ngModel]="search()"
-                      (ngModelChange)="search.set($event)"
-                      [placeholder]="t('whatNeedPlaceholder')">
+                  <label class="search-field">
+                    <span class="search-label">{{ t('location') }}</span>
+                    <span class="search-input-wrap search-input-wrap-location">
+                      <input
+                        [ngModel]="location()"
+                        (ngModelChange)="location.set($event)"
+                        list="locationSuggestions"
+                        [placeholder]="t('locationPlaceholder')">
+                    </span>
                   </label>
 
-                  <label>
-                    {{ t('location') }}
-                    <input
-                      [ngModel]="location()"
-                      (ngModelChange)="location.set($event)"
-                      list="locationSuggestions"
-                      [placeholder]="t('locationPlaceholder')">
-                  </label>
-
-                  <label>
-                    {{ t('category') }}
-                    <select [ngModel]="category()" (ngModelChange)="category.set($event)">
-                      <option value="">{{ t('allCategories') }}</option>
-                      @for (item of view.categories; track item.id) {
-                        <option [value]="item.slug">{{ item.name }}</option>
-                      }
-                    </select>
+                  <label class="search-field">
+                    <span class="search-label">{{ t('category') }}</span>
+                    <span class="search-input-wrap search-input-wrap-category">
+                      <input
+                        [ngModel]="categoryInput()"
+                        (ngModelChange)="onCategoryInputChange($event, view.categories)"
+                        list="categorySuggestions"
+                        [placeholder]="t('allCategories')">
+                    </span>
                   </label>
 
                   <div class="search-submit">
@@ -206,6 +209,44 @@
               }
             </div>
           </section>
+
+          <section class="section guide-section" id="urdu-guides">
+            <div class="section-head">
+              <div>
+                <h2>Urdu User Guide</h2>
+                <p>Website par aane wale har user ke liye short aur easy flow guides. In cards ko baad mein real MP4 ya YouTube video se replace kiya ja sakta hai.</p>
+              </div>
+              <a class="btn secondary" [href]="supportWhatsAppUrl()" target="_blank" rel="noopener">Guide on WhatsApp</a>
+            </div>
+
+            <div class="grid grid-3 guide-grid">
+              @for (guide of guideVideosForHome(); track guide.id) {
+                <article class="card guide-card">
+                  <div class="guide-media">
+                    <button type="button" class="guide-play" (click)="openGuideVideo(guide)">Play</button>
+                    <div class="guide-duration">{{ guide.duration }}</div>
+                  </div>
+                  <div class="guide-card-body">
+                    <div class="guide-meta-row">
+                      <span class="badge">{{ guide.audience }}</span>
+                      <span class="guide-status">Urdu guide</span>
+                    </div>
+                    <h3>{{ guide.title }}</h3>
+                    <p class="guide-summary">{{ guide.summary }}</p>
+                    <div class="guide-steps">
+                      @for (step of guide.steps; track step) {
+                        <div class="guide-step">{{ step }}</div>
+                      }
+                    </div>
+                    <div class="stack-actions">
+                      <button type="button" class="btn secondary" (click)="openGuideVideo(guide)">Preview guide</button>
+                      <a class="btn brand" [href]="supportWhatsAppUrl()" target="_blank" rel="noopener">WhatsApp se mangwayen</a>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
         </div>
       </main>
     }
@@ -221,40 +262,45 @@
                 <option [value]="suggestion"></option>
               }
             </datalist>
+            <datalist id="servicesCategorySuggestions">
+              @for (item of list.categories; track item.id) {
+                <option [value]="item.name"></option>
+              }
+            </datalist>
 
             <div class="search-shell services-search-shell">
               <div class="search-panel listing-search-panel">
-                <h3>{{ t('searchTitle') }}</h3>
+                <div class="search-panel-top simple">
+                  <div class="search-copy">
+                    <h3>{{ t('searchTitle') }}</h3>
+                    <p>Filters change karke results ko asani se refine karein.</p>
+                  </div>
+                </div>
                 @if (authError()) {
                   <div class="flash error">{{ authError() }}</div>
                 }
 
                 <div class="hero-search-grid">
-                  <label>
-                    {{ t('whatNeed') }}
-                    <input
-                      [ngModel]="search()"
-                      (ngModelChange)="search.set($event)"
-                      [placeholder]="t('whatNeedPlaceholder')">
+                  <label class="search-field">
+                    <span class="search-label">{{ t('location') }}</span>
+                    <span class="search-input-wrap search-input-wrap-location">
+                      <input
+                        [ngModel]="location()"
+                        (ngModelChange)="location.set($event)"
+                        list="servicesLocationSuggestions"
+                        [placeholder]="t('locationPlaceholder')">
+                    </span>
                   </label>
 
-                  <label>
-                    {{ t('location') }}
-                    <input
-                      [ngModel]="location()"
-                      (ngModelChange)="location.set($event)"
-                      list="servicesLocationSuggestions"
-                      [placeholder]="t('locationPlaceholder')">
-                  </label>
-
-                  <label>
-                    {{ t('category') }}
-                    <select [ngModel]="category()" (ngModelChange)="category.set($event)">
-                      <option value="">{{ t('allCategories') }}</option>
-                      @for (item of list.categories; track item.id) {
-                        <option [value]="item.slug">{{ item.name }}</option>
-                      }
-                    </select>
+                  <label class="search-field">
+                    <span class="search-label">{{ t('category') }}</span>
+                    <span class="search-input-wrap search-input-wrap-category">
+                      <input
+                        [ngModel]="categoryInput()"
+                        (ngModelChange)="onCategoryInputChange($event, list.categories)"
+                        list="servicesCategorySuggestions"
+                        [placeholder]="t('allCategories')">
+                    </span>
                   </label>
 
                   <div class="search-submit">
@@ -631,6 +677,77 @@
                       <div class="stack-actions">
                         <button class="btn secondary" type="submit" [disabled]="dashboardActionKey('update-category-' + category.id)">{{ dashboardActionKey('update-category-' + category.id) ? 'Saving...' : 'Update' }}</button>
                         <button class="btn danger" type="button" (click)="deleteItem(category.delete_url, 'delete-category-' + category.id)" [disabled]="dashboardActionKey('delete-category-' + category.id)">Delete</button>
+                      </div>
+                    </form>
+                  }
+                </div>
+              </section>
+
+              <section class="card dashboard-block">
+                <h3>User guide videos</h3>
+                <form class="grid grid-2" (ngSubmit)="createGuide()">
+                  <label>Title<input type="text" name="guide_title" [(ngModel)]="dashboardGuideForm.title" required></label>
+                  <label>Audience<input type="text" name="guide_audience" [(ngModel)]="dashboardGuideForm.audience" placeholder="Customer or Provider"></label>
+                  <label>Duration<input type="text" name="guide_duration" [(ngModel)]="dashboardGuideForm.duration" placeholder="01:20"></label>
+                  <label>Sort order<input type="number" name="guide_sort_order" [(ngModel)]="dashboardGuideForm.sort_order"></label>
+                  <label>Video type
+                    <select name="guide_video_type" [(ngModel)]="dashboardGuideForm.video_type">
+                      <option value="youtube">YouTube</option>
+                      <option value="mp4">MP4 Upload</option>
+                    </select>
+                  </label>
+                  @if (dashboardGuideForm.video_type === 'youtube') {
+                    <label>YouTube URL<input type="text" name="guide_video_url" [(ngModel)]="dashboardGuideForm.video_url" placeholder="https://youtu.be/..."></label>
+                  } @else {
+                    <label>MP4 file<input type="file" name="guide_video_file" accept="video/mp4,video/quicktime" (change)="onGuideCreateFileChange($event)"></label>
+                  }
+                  <label class="full-span">Summary<textarea name="guide_summary" [(ngModel)]="dashboardGuideForm.summary"></textarea></label>
+                  <label class="full-span">Steps, one per line<textarea name="guide_steps_text" [(ngModel)]="dashboardGuideForm.steps_text"></textarea></label>
+                  <label class="full-span">Voiceover, one per line<textarea name="guide_voiceover_text" [(ngModel)]="dashboardGuideForm.voiceover_text"></textarea></label>
+                  <label class="full-span">Captions, one per line<textarea name="guide_captions_text" [(ngModel)]="dashboardGuideForm.captions_text"></textarea></label>
+                  <label class="checkbox-row full-span">
+                    <input type="checkbox" name="guide_is_active" [(ngModel)]="dashboardGuideForm.is_active">
+                    Active on homepage
+                  </label>
+                  <div class="stack-actions">
+                    <button class="btn brand" type="submit" [disabled]="dashboardActionKey('create-guide')">{{ dashboardActionKey('create-guide') ? 'Please wait...' : 'Add guide video' }}</button>
+                  </div>
+                </form>
+
+                <div class="grid grid-2">
+                  @for (guide of dash.guideVideos ?? []; track guide.id) {
+                    <form class="quick-item quick-item-form" (ngSubmit)="updateGuide(guide.id, guide.update_url)">
+                      <div class="grid form-mini">
+                        <label>Title<input type="text" [name]="'guide_title_' + guide.id" [(ngModel)]="$any(dashboardGuideEdit[guide.id]).title" required></label>
+                        <label>Audience<input type="text" [name]="'guide_audience_' + guide.id" [(ngModel)]="$any(dashboardGuideEdit[guide.id]).audience"></label>
+                        <label>Duration<input type="text" [name]="'guide_duration_' + guide.id" [(ngModel)]="$any(dashboardGuideEdit[guide.id]).duration"></label>
+                        <label>Sort order<input type="number" [name]="'guide_sort_' + guide.id" [(ngModel)]="$any(dashboardGuideEdit[guide.id]).sort_order"></label>
+                        <label>Video type
+                          <select [name]="'guide_type_' + guide.id" [(ngModel)]="$any(dashboardGuideEdit[guide.id]).video_type">
+                            <option value="youtube">YouTube</option>
+                            <option value="mp4">MP4 Upload</option>
+                          </select>
+                        </label>
+                        @if ($any(dashboardGuideEdit[guide.id]).video_type === 'youtube') {
+                          <label>YouTube URL<input type="text" [name]="'guide_url_' + guide.id" [(ngModel)]="$any(dashboardGuideEdit[guide.id]).video_url"></label>
+                        } @else {
+                          <label>Replace MP4<input type="file" [name]="'guide_file_' + guide.id" accept="video/mp4,video/quicktime" (change)="onGuideEditFileChange(guide.id, $event)"></label>
+                        }
+                        <label class="full-span">Summary<textarea [name]="'guide_summary_' + guide.id" [(ngModel)]="$any(dashboardGuideEdit[guide.id]).summary"></textarea></label>
+                        <label class="full-span">Steps<textarea [name]="'guide_steps_' + guide.id" [(ngModel)]="$any(dashboardGuideEdit[guide.id]).steps_text"></textarea></label>
+                        <label class="full-span">Voiceover<textarea [name]="'guide_voice_' + guide.id" [(ngModel)]="$any(dashboardGuideEdit[guide.id]).voiceover_text"></textarea></label>
+                        <label class="full-span">Captions<textarea [name]="'guide_caption_' + guide.id" [(ngModel)]="$any(dashboardGuideEdit[guide.id]).captions_text"></textarea></label>
+                        <label class="checkbox-row full-span">
+                          <input type="checkbox" [name]="'guide_active_' + guide.id" [(ngModel)]="$any(dashboardGuideEdit[guide.id]).is_active">
+                          Active on homepage
+                        </label>
+                        @if (guide.video_path) {
+                          <div class="notice full-span">Current MP4 uploaded and ready.</div>
+                        }
+                      </div>
+                      <div class="stack-actions">
+                        <button class="btn secondary" type="submit" [disabled]="dashboardActionKey('update-guide-' + guide.id)">{{ dashboardActionKey('update-guide-' + guide.id) ? 'Saving...' : 'Update' }}</button>
+                        <button class="btn danger" type="button" (click)="deleteItem(guide.delete_url, 'delete-guide-' + guide.id)" [disabled]="dashboardActionKey('delete-guide-' + guide.id)">Delete</button>
                       </div>
                     </form>
                   }
@@ -1077,20 +1194,6 @@
   }
 </div>
 
-<footer class="footer">
-  <div class="container footer-shell" style="display:grid;gap:16px;">
-    <div>
-      <strong>GharKaam Pakistan</strong>
-      <div class="muted">Launch support: {{ supportEmail() }} - {{ supportPhone() }}</div>
-    </div>
-    <div class="stack-actions">
-      <a class="btn secondary" [href]="privacyUrl()">Privacy</a>
-      <a class="btn secondary" [href]="termsUrl()">Terms</a>
-      <a class="btn brand" [href]="supportWhatsAppUrl()" target="_blank" rel="noopener">WhatsApp Support</a>
-    </div>
-  </div>
-</footer>
-
 <a class="whatsapp-float" [href]="supportWhatsAppUrl()" target="_blank" rel="noopener" aria-label="WhatsApp help">
   <span class="whatsapp-float-icon" aria-hidden="true">
     <svg viewBox="0 0 32 32" role="img" focusable="false">
@@ -1103,6 +1206,49 @@
     <small>{{ supportPhone() }}</small>
   </span>
 </a>
+
+@if (activeGuideVideo(); as guideModal) {
+  <div class="guide-modal-backdrop" (click)="closeGuideVideo()"></div>
+  <section class="guide-modal" aria-label="Urdu guide video preview">
+    <div class="guide-modal-head">
+      <div>
+        <span class="badge">{{ guideModal.audience }}</span>
+        <h3>{{ guideModal.title }}</h3>
+      </div>
+      <button type="button" class="guide-modal-close" (click)="closeGuideVideo()">Close</button>
+    </div>
+
+    @if (guideModal.videoType === 'youtube' && guideModal.videoEmbedUrl) {
+      <iframe class="guide-player" [attr.src]="guideModal.videoEmbedUrl" title="Guide video" allowfullscreen loading="lazy"></iframe>
+    } @else if (guideModal.videoUrl) {
+      <video class="guide-player" controls [src]="guideModal.videoUrl"></video>
+    } @else {
+      <div class="guide-player-placeholder">
+        <div class="guide-player-copy">
+          <strong>Video slot ready</strong>
+          <p>MP4 ya YouTube embed milte hi yahi modal mein smooth video chalegi.</p>
+          <div class="guide-duration">{{ guideModal.duration }}</div>
+        </div>
+      </div>
+    }
+
+    <div class="guide-modal-grid">
+      <div class="guide-modal-block">
+        <h4>Voiceover</h4>
+        @for (line of guideModal.voiceover; track line) {
+          <div class="guide-line">{{ line }}</div>
+        }
+      </div>
+
+      <div class="guide-modal-block">
+        <h4>Captions</h4>
+        @for (line of guideModal.captions; track line) {
+          <div class="guide-line">{{ line }}</div>
+        }
+      </div>
+    </div>
+  </section>
+}
 
 <ng-template #loadingBlock>
   <div class="loading-shell">

@@ -71,6 +71,10 @@ class SpaPageController extends Controller
             ]),
             'categories' => Category::orderBy('name')->get(['id', 'name', 'slug']),
             'location_suggestions' => $this->locationSuggestions(),
+            'maps' => [
+                'googlePlacesEnabled' => filled(config('services.google_maps.browser_key')),
+                'googlePlacesApiKey' => config('services.google_maps.browser_key'),
+            ],
             'filters' => $request->only(['search', 'location', 'category']),
             'summary' => [
                 'results' => $services->count(),

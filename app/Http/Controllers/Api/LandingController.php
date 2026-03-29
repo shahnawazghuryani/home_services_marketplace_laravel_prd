@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\GuideVideo;
 use App\Models\Provider;
 use App\Models\Review;
 use App\Models\Service;
@@ -125,6 +126,26 @@ class LandingController extends Controller
             ];
         });
 
+        $guides = GuideVideo::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (GuideVideo $guide) => [
+                'id' => $guide->id,
+                'title' => $guide->title,
+                'duration' => $guide->duration,
+                'summary' => $guide->summary,
+                'audience' => $guide->audience,
+                'steps' => $guide->steps ?? [],
+                'voiceover' => $guide->voiceover ?? [],
+                'captions' => $guide->captions ?? [],
+                'videoType' => $guide->video_type,
+                'videoUrl' => $guide->video_type === 'mp4' ? ($guide->video_path ? asset($guide->video_path) : null) : $guide->video_url,
+                'videoEmbedUrl' => $guide->video_type === 'youtube' ? $this->youtubeEmbedUrl($guide->video_url) : null,
+            ])
+            ->values();
+
         return response()->json([
             'brand' => [
                 'name' => 'GharKaam',
@@ -141,6 +162,7 @@ class LandingController extends Controller
             'categories' => $categories,
             'services' => $services,
             'providers' => $providers,
+            'guides' => $guides,
             'filters' => array_merge(
                 $request->only(['search', 'location', 'category']),
                 ['resolved_category' => $effectiveCategory !== '' ? $effectiveCategory : null]
@@ -251,5 +273,17 @@ class LandingController extends Controller
             ->values()
             ->all();
     }
-}
 
+    protected function youtubeEmbedUrl(?string $url): ?string
+    {
+        if (! $url) {
+            return null;
+        }
+
+        if (preg_match('~(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([^&?/]+)~', $url, $matches)) {
+            return 'https://www.youtube.com/embed/' . $matches[1];
+        }
+
+        return $url;
+    }
+}

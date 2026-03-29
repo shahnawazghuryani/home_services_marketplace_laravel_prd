@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use App\Models\Category;
+use App\Models\GuideVideo;
 use App\Models\MarketplaceNotification;
 use App\Models\Provider;
 use App\Models\Review;
@@ -173,6 +174,7 @@ class DashboardController extends Controller
                     'update_url' => route('admin.categories.update', $category),
                     'delete_url' => route('admin.categories.destroy', $category),
                 ]),
+                'guideVideos' => GuideVideo::query()->orderBy('sort_order')->orderBy('id')->get()->map(fn ($guide) => $this->guideVideoPayload($guide)),
                 'services' => Service::with(['category', 'categories', 'provider.user'])->latest()->take(12)->get()->map(fn ($service) => [
                     'id' => $service->id,
                     'title' => $service->title,
@@ -458,6 +460,87 @@ class DashboardController extends Controller
         return back()->with('success', 'Category deleted successfully.');
     }
 
+    public function storeGuide(Request $request): RedirectResponse|JsonResponse
+    {
+        $this->ensureAdmin($request);
+
+        $data = $this->validateGuide($request);
+
+        $guide = GuideVideo::create([
+            'title' => $data['title'],
+            'slug' => Str::slug($data['title']) . '-' . Str::lower(Str::random(4)),
+            'audience' => $data['audience'] ?? null,
+            'summary' => $data['summary'] ?? null,
+            'duration' => $data['duration'] ?? null,
+            'steps' => $this->normalizeGuideLines($data['steps_text'] ?? ''),
+            'voiceover' => $this->normalizeGuideLines($data['voiceover_text'] ?? ''),
+            'captions' => $this->normalizeGuideLines($data['captions_text'] ?? ''),
+            'video_type' => $data['video_type'],
+            'video_url' => $data['video_type'] === 'youtube' ? ($data['video_url'] ?? null) : null,
+            'video_path' => $data['video_type'] === 'mp4' ? $this->uploadGuideVideoFile($request) : null,
+            'sort_order' => (int) ($data['sort_order'] ?? 0),
+            'is_active' => $request->boolean('is_active', true),
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Guide video created successfully.',
+                'guide' => $this->guideVideoPayload($guide),
+            ]);
+        }
+
+        return back()->with('success', 'Guide video created successfully.');
+    }
+
+    public function updateGuide(Request $request, GuideVideo $guideVideo): RedirectResponse|JsonResponse
+    {
+        $this->ensureAdmin($request);
+
+        $data = $this->validateGuide($request, true);
+
+        $guideVideo->update([
+            'title' => $data['title'],
+            'slug' => Str::slug($data['title']) . '-' . $guideVideo->id,
+            'audience' => $data['audience'] ?? null,
+            'summary' => $data['summary'] ?? null,
+            'duration' => $data['duration'] ?? null,
+            'steps' => $this->normalizeGuideLines($data['steps_text'] ?? ''),
+            'voiceover' => $this->normalizeGuideLines($data['voiceover_text'] ?? ''),
+            'captions' => $this->normalizeGuideLines($data['captions_text'] ?? ''),
+            'video_type' => $data['video_type'],
+            'video_url' => $data['video_type'] === 'youtube' ? ($data['video_url'] ?? null) : null,
+            'video_path' => $data['video_type'] === 'mp4'
+                ? $this->uploadGuideVideoFile($request, $guideVideo->video_path)
+                : $this->deleteGuideVideoFileAndReturnNull($guideVideo->video_path),
+            'sort_order' => (int) ($data['sort_order'] ?? 0),
+            'is_active' => $request->boolean('is_active', false),
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Guide video updated successfully.',
+                'guide' => $this->guideVideoPayload($guideVideo->fresh()),
+            ]);
+        }
+
+        return back()->with('success', 'Guide video updated successfully.');
+    }
+
+    public function destroyGuide(Request $request, GuideVideo $guideVideo): RedirectResponse|JsonResponse
+    {
+        $this->ensureAdmin($request);
+        $this->deleteGuideVideoFile($guideVideo->video_path);
+        $guideVideo->delete();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Guide video deleted successfully.',
+            ]);
+        }
+
+        return back()->with('success', 'Guide video deleted successfully.');
+    }
+
     public function editAdminService(Request $request, Service $service)
     {
         $this->ensureAdmin($request);
@@ -577,6 +660,114 @@ class DashboardController extends Controller
     protected function ensureAdmin(Request $request): void
     {
         abort_unless($request->user()->isAdmin(), 403);
+    }
+
+    protected function validateGuide(Request $request, bool $isUpdate = false): array
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'audience' => ['nullable', 'string', 'max:120'],
+            'summary' => ['nullable', 'string', 'max:1200'],
+            'duration' => ['nullable', 'string', 'max:20'],
+            'steps_text' => ['nullable', 'string', 'max:5000'],
+            'voiceover_text' => ['nullable', 'string', 'max:8000'],
+            'captions_text' => ['nullable', 'string', 'max:5000'],
+            'video_type' => ['required', Rule::in(['youtube', 'mp4'])],
+            'video_url' => ['nullable', 'string', 'max:1000'],
+            'video_file' => [$isUpdate ? 'nullable' : 'nullable', 'file', 'mimetypes:video/mp4,video/quicktime', 'max:51200'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $this->contentSafety->ensureCleanText([
+            'title' => $data['title'],
+            'summary' => $data['summary'] ?? '',
+            'steps' => $data['steps_text'] ?? '',
+            'voiceover' => $data['voiceover_text'] ?? '',
+            'captions' => $data['captions_text'] ?? '',
+        ]);
+
+        if (($data['video_type'] ?? '') === 'youtube' && trim((string) ($data['video_url'] ?? '')) === '') {
+            abort(422, 'YouTube link required.');
+        }
+
+        if (($data['video_type'] ?? '') === 'mp4' && ! $request->hasFile('video_file') && ! $isUpdate) {
+            abort(422, 'MP4 file required.');
+        }
+
+        return $data;
+    }
+
+    protected function normalizeGuideLines(string $value): array
+    {
+        return collect(preg_split('/\r\n|\r|\n/', trim($value)) ?: [])
+            ->map(fn ($line) => trim((string) $line))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    protected function uploadGuideVideoFile(Request $request, ?string $existingPath = null): ?string
+    {
+        if (! $request->hasFile('video_file')) {
+            return $existingPath;
+        }
+
+        $directory = public_path('guide-videos');
+        if (! is_dir($directory)) {
+            mkdir($directory, 0777, true);
+        }
+
+        $this->deleteGuideVideoFile($existingPath);
+
+        $file = $request->file('video_file');
+        $filename = now()->format('YmdHis') . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
+        $file->move($directory, $filename);
+
+        return 'guide-videos/' . $filename;
+    }
+
+    protected function deleteGuideVideoFile(?string $path): void
+    {
+        if (! $path) {
+            return;
+        }
+
+        $fullPath = public_path($path);
+        if (file_exists($fullPath)) {
+            unlink($fullPath);
+        }
+    }
+
+    protected function deleteGuideVideoFileAndReturnNull(?string $path): ?string
+    {
+        $this->deleteGuideVideoFile($path);
+
+        return null;
+    }
+
+    protected function guideVideoPayload(GuideVideo $guide): array
+    {
+        return [
+            'id' => $guide->id,
+            'title' => $guide->title,
+            'audience' => $guide->audience,
+            'summary' => $guide->summary,
+            'duration' => $guide->duration,
+            'steps' => $guide->steps ?? [],
+            'voiceover' => $guide->voiceover ?? [],
+            'captions' => $guide->captions ?? [],
+            'steps_text' => implode("\n", $guide->steps ?? []),
+            'voiceover_text' => implode("\n", $guide->voiceover ?? []),
+            'captions_text' => implode("\n", $guide->captions ?? []),
+            'video_type' => $guide->video_type,
+            'video_url' => $guide->video_url,
+            'video_path' => $guide->video_path ? asset($guide->video_path) : null,
+            'sort_order' => (int) $guide->sort_order,
+            'is_active' => (bool) $guide->is_active,
+            'update_url' => route('admin.guides.update', $guide),
+            'delete_url' => route('admin.guides.destroy', $guide),
+        ];
     }
 
     protected function adminTrafficSummary(): array

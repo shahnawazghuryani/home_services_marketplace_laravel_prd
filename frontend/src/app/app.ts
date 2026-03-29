@@ -45,6 +45,20 @@ interface ProviderItem {
   hourly_rate: number;
 }
 
+interface UserGuideVideo {
+  id: string | number;
+  title: string;
+  duration: string;
+  summary: string;
+  audience: string;
+  steps: string[];
+  voiceover: string[];
+  captions: string[];
+  videoType?: string | null;
+  videoUrl?: string | null;
+  videoEmbedUrl?: string | null;
+}
+
 interface LandingResponse {
   brand: {
     name: string;
@@ -61,6 +75,7 @@ interface LandingResponse {
   categories: Category[];
   services: ServiceItem[];
   providers: ProviderItem[];
+  guides?: UserGuideVideo[];
   location_suggestions: string[];
   filters: {
     search?: string;
@@ -129,6 +144,26 @@ interface DashboardData {
     name: string;
     icon?: string | null;
     description?: string | null;
+    update_url: string;
+    delete_url: string;
+  }>;
+  guideVideos?: Array<{
+    id: number;
+    title: string;
+    audience?: string | null;
+    summary?: string | null;
+    duration?: string | null;
+    steps: string[];
+    voiceover: string[];
+    captions: string[];
+    steps_text: string;
+    voiceover_text: string;
+    captions_text: string;
+    video_type: string;
+    video_url?: string | null;
+    video_path?: string | null;
+    sort_order: number;
+    is_active: boolean;
     update_url: string;
     delete_url: string;
   }>;
@@ -454,6 +489,7 @@ export class App {
   readonly search = signal('');
   readonly location = signal('');
   readonly category = signal('');
+  readonly categoryInput = signal('');
   readonly locale = signal<LocaleKey>('en');
   readonly currentLocationText = signal(COPY.en['allowLocation']);
   readonly currentPath = signal(this.readPath());
@@ -476,6 +512,90 @@ export class App {
   readonly aiProviderResult = signal<AiProviderRecommendationsResponse | null>(null);
   readonly authState = signal<AuthStateResponse>({ logged_in: false, role: null });
   readonly mobileNavOpen = signal(false);
+  readonly activeGuideVideo = signal<UserGuideVideo | null>(null);
+  readonly userGuideVideos: UserGuideVideo[] = [
+    {
+      id: 'customer-search',
+      title: 'Service dhoondhna aur provider select karna',
+      duration: '01:10',
+      summary: 'User ko batayein ke homepage se service, city aur category select karke best provider kaise dekhna hai.',
+      audience: 'Naye customer',
+      steps: [
+        'Homepage khol kar search box mein apni zarurat likhein.',
+        'Location aur category select karke results dekhein.',
+        'Provider profile aur pricing compare karke service open karein.',
+      ],
+      voiceover: [
+        'Assalamualaikum. GharKaam par aap ghar ke kaam ke liye trusted service asani se dhoondh sakte hain.',
+        'Search box mein apni zarurat likhein, jaise plumber, electrician ya cleaning.',
+        'Phir location aur category select karke search button dabayein.',
+        'Results mein provider ka area, price aur reviews compare karein.',
+        'Jo service pasand aaye us ki detail page open karke behtar faisla karein.',
+      ],
+      captions: [
+        'GharKaam par service dhoondhna bohat asaan hai',
+        'Apni zarurat likhein aur search karein',
+        'Location aur category select karein',
+        'Price, area aur reviews compare karein',
+        'Best provider choose karke next step par jaayein',
+      ],
+      videoUrl: null,
+    },
+    {
+      id: 'customer-booking',
+      title: 'Account banana aur booking submit karna',
+      duration: '01:20',
+      summary: 'Signup, login, booking form, aur booking confirmation ka complete flow simple Urdu mein.',
+      audience: 'Customer onboarding',
+      steps: [
+        'Register ya login karein.',
+        'Service detail page se booking form open karein.',
+        'Date, address aur notes ke saath request submit karein.',
+      ],
+      voiceover: [
+        'Booking karne ke liye sab se pehle apna account bana lein ya login karein.',
+        'Register form mein basic details fill karke account create karein.',
+        'Login ke baad service detail page par Book button dabayein.',
+        'Booking form mein date, address aur notes add karein.',
+        'Submit karne ke baad dashboard se booking status dekhte rahein.',
+      ],
+      captions: [
+        'Step 1: Login ya Register karein',
+        'Apni basic details fill karein',
+        'Book button dabayein',
+        'Date, address aur notes enter karein',
+        'Dashboard se booking status track karein',
+      ],
+      videoUrl: null,
+    },
+    {
+      id: 'provider-flow',
+      title: 'Provider dashboard aur service create karna',
+      duration: '01:30',
+      summary: 'Providers ko dashboard, profile update aur AI Service Builder se service create karne ka short guide.',
+      audience: 'Service providers',
+      steps: [
+        'Provider account se login karke dashboard open karein.',
+        'Profile aur service area complete karein.',
+        'AI prompt ya manual form se nayi service create karein.',
+      ],
+      voiceover: [
+        'Provider login ke baad aap apna poora dashboard use kar sakte hain.',
+        'Profile complete karein taake customer ko aap ki information clear nazar aaye.',
+        'Add Service page open karke nayi service create karein.',
+        'AI Service Builder mein simple prompt likh kar quick draft hasil karein.',
+        'Review ke baad service save karein aur customers ke liye live ho jaayein.',
+      ],
+      captions: [
+        'Provider login karein',
+        'Dashboard se sab manage karein',
+        'Profile complete karein',
+        'AI se quick draft banayein',
+        'Service save karke live ho jaayein',
+      ],
+      videoUrl: null,
+    },
+  ];
 
   loginForm = {
     email: '',
@@ -539,6 +659,34 @@ export class App {
     description: '',
   };
   dashboardCategoryEdit: Record<number, { name: string; icon: string; description: string }> = {};
+  dashboardGuideForm = {
+    title: '',
+    audience: '',
+    summary: '',
+    duration: '',
+    steps_text: '',
+    voiceover_text: '',
+    captions_text: '',
+    video_type: 'youtube',
+    video_url: '',
+    sort_order: 0,
+    is_active: true,
+  };
+  dashboardGuideEdit: Record<number, {
+    title: string;
+    audience: string;
+    summary: string;
+    duration: string;
+    steps_text: string;
+    voiceover_text: string;
+    captions_text: string;
+    video_type: string;
+    video_url: string;
+    sort_order: number;
+    is_active: boolean;
+  }> = {};
+  dashboardGuideCreateFile: File | null = null;
+  dashboardGuideEditFiles: Record<number, File | null> = {};
   providerBookingStatus: Record<number, string> = {};
   customerReview: Record<number, { rating: number; comment: string }> = {};
   bookingForm = {
@@ -590,6 +738,18 @@ export class App {
 
   closeMobileNav(): void {
     this.mobileNavOpen.set(false);
+  }
+
+  openGuideVideo(guide: UserGuideVideo): void {
+    this.activeGuideVideo.set(guide);
+  }
+
+  closeGuideVideo(): void {
+    this.activeGuideVideo.set(null);
+  }
+
+  guideVideosForHome(): UserGuideVideo[] {
+    return this.data()?.guides?.length ? this.data()?.guides ?? [] : this.userGuideVideos;
   }
 
   isHomePage(): boolean {
@@ -750,6 +910,7 @@ export class App {
           this.search.set(response.filters.search ?? this.search());
           this.location.set(response.filters.location ?? this.location());
           this.category.set(response.filters.category ?? this.category());
+          this.syncCategoryInput(response.categories);
           this.loading.set(false);
         },
         error: () => {
@@ -780,6 +941,7 @@ export class App {
     this.search.set('');
     this.location.set('');
     this.category.set('');
+    this.categoryInput.set('');
     this.currentLocationText.set(this.t('allowLocation'));
     if (this.isServicesPage()) {
       this.navigateWithFilters('/services');
@@ -789,6 +951,31 @@ export class App {
 
     this.navigateWithFilters('/');
     this.load();
+  }
+
+  onCategoryInputChange(value: string, categories: Array<{ id: number; name: string; slug: string }>): void {
+    this.categoryInput.set(value);
+
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) {
+      this.category.set('');
+      return;
+    }
+
+    const matched = categories.find((item) =>
+      item.name.toLowerCase() === normalized || item.slug.toLowerCase() === normalized
+    );
+
+    this.category.set(matched?.slug ?? this.slugify(value));
+  }
+
+  applyQuickSearch(search: string, category = '', location = ''): void {
+    this.search.set(search);
+    this.category.set(category);
+    if (location) {
+      this.location.set(location);
+    }
+    this.submitServiceSearch();
   }
 
   formatPhone(phone: string): string {
@@ -969,6 +1156,23 @@ export class App {
               description: category.description ?? '',
             };
           });
+          this.dashboardGuideEdit = {};
+          this.dashboardGuideEditFiles = {};
+          (response.guideVideos ?? []).forEach((guide) => {
+            this.dashboardGuideEdit[guide.id] = {
+              title: guide.title,
+              audience: guide.audience ?? '',
+              summary: guide.summary ?? '',
+              duration: guide.duration ?? '',
+              steps_text: guide.steps_text ?? '',
+              voiceover_text: guide.voiceover_text ?? '',
+              captions_text: guide.captions_text ?? '',
+              video_type: guide.video_type ?? 'youtube',
+              video_url: guide.video_url ?? '',
+              sort_order: guide.sort_order ?? 0,
+              is_active: !!guide.is_active,
+            };
+          });
           this.providerBookingStatus = {};
           (response.bookings ?? []).forEach((booking) => {
             const id = Number(booking['id'] ?? 0);
@@ -1007,6 +1211,16 @@ export class App {
     return this.dashboardActionLoading === key;
   }
 
+  onGuideCreateFileChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.dashboardGuideCreateFile = input.files?.[0] ?? null;
+  }
+
+  onGuideEditFileChange(guideId: number, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.dashboardGuideEditFiles[guideId] = input.files?.[0] ?? null;
+  }
+
   createCategory(): void {
     this.dashboardActionLoading = 'create-category';
     this.authError.set('');
@@ -1023,6 +1237,59 @@ export class App {
         error: (error) => {
           this.dashboardActionLoading = '';
           this.authError.set(error?.error?.message ?? 'Category create failed.');
+        }
+      });
+  }
+
+  createGuide(): void {
+    this.dashboardActionLoading = 'create-guide';
+    this.authError.set('');
+
+    this.http.post(this.backendUrl('/admin/guides'), this.buildGuideFormData(this.dashboardGuideForm, this.dashboardGuideCreateFile), {
+      headers: this.multipartHeaders(),
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.dashboardGuideForm = {
+            title: '',
+            audience: '',
+            summary: '',
+            duration: '',
+            steps_text: '',
+            voiceover_text: '',
+            captions_text: '',
+            video_type: 'youtube',
+            video_url: '',
+            sort_order: 0,
+            is_active: true,
+          };
+          this.dashboardGuideCreateFile = null;
+          this.dashboardActionLoading = '';
+          this.loadDashboard();
+        },
+        error: (error) => {
+          this.dashboardActionLoading = '';
+          this.authError.set(error?.error?.message ?? 'Guide create failed.');
+        }
+      });
+  }
+
+  updateGuide(guideId: number, url: string): void {
+    this.dashboardActionLoading = `update-guide-${guideId}`;
+    this.authError.set('');
+
+    this.http.post(url, this.buildGuideFormData(this.dashboardGuideEdit[guideId], this.dashboardGuideEditFiles[guideId] ?? null), {
+      headers: this.multipartHeaders(),
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.dashboardGuideEditFiles[guideId] = null;
+          this.dashboardActionLoading = '';
+          this.loadDashboard();
+        },
+        error: (error) => {
+          this.dashboardActionLoading = '';
+          this.authError.set(error?.error?.message ?? 'Guide update failed.');
         }
       });
   }
@@ -1351,6 +1618,48 @@ export class App {
     });
   }
 
+  private multipartHeaders(): HttpHeaders {
+    const token = decodeURIComponent(this.readCookie('XSRF-TOKEN'));
+
+    return new HttpHeaders({
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-XSRF-TOKEN': token,
+    });
+  }
+
+  private buildGuideFormData(form: {
+    title: string;
+    audience: string;
+    summary: string;
+    duration: string;
+    steps_text: string;
+    voiceover_text: string;
+    captions_text: string;
+    video_type: string;
+    video_url: string;
+    sort_order: number;
+    is_active: boolean;
+  }, file: File | null): FormData {
+    const formData = new FormData();
+    formData.append('title', form.title ?? '');
+    formData.append('audience', form.audience ?? '');
+    formData.append('summary', form.summary ?? '');
+    formData.append('duration', form.duration ?? '');
+    formData.append('steps_text', form.steps_text ?? '');
+    formData.append('voiceover_text', form.voiceover_text ?? '');
+    formData.append('captions_text', form.captions_text ?? '');
+    formData.append('video_type', form.video_type ?? 'youtube');
+    formData.append('video_url', form.video_url ?? '');
+    formData.append('sort_order', String(form.sort_order ?? 0));
+    formData.append('is_active', form.is_active ? '1' : '0');
+    if (file) {
+      formData.append('video_file', file);
+    }
+
+    return formData;
+  }
+
   private readCookie(name: string): string {
     if (typeof document === 'undefined') {
       return '';
@@ -1418,6 +1727,18 @@ export class App {
     this.search.set(params.get('search') ?? '');
     this.location.set(params.get('location') ?? '');
     this.category.set(params.get('category') ?? '');
+    this.categoryInput.set(params.get('category') ?? '');
+  }
+
+  private syncCategoryInput(categories: Array<{ id: number; name: string; slug: string }>): void {
+    const selected = this.category().trim();
+    if (!selected) {
+      this.categoryInput.set('');
+      return;
+    }
+
+    const matched = categories.find((item) => item.slug === selected);
+    this.categoryInput.set(matched?.name ?? selected);
   }
 
   private hydrateAuthRedirect(): void {
@@ -1586,6 +1907,7 @@ export class App {
       .subscribe({
         next: (response) => {
           this.servicesPageData.set(response);
+          this.syncCategoryInput(response.categories);
           this.pageLoading.set(false);
         },
         error: () => {
