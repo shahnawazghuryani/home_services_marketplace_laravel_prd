@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Provider;
 use App\Models\Service;
 use App\Models\User;
+use App\Services\ContentSafety;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,10 @@ use Illuminate\Validation\Rule;
 
 class ServiceController extends Controller
 {
+    public function __construct(private readonly ContentSafety $contentSafety)
+    {
+    }
+
     public function index(Request $request)
     {
         $query = Service::with(['category', 'categories', 'provider.user'])->where('is_active', true);
@@ -265,6 +270,12 @@ class ServiceController extends Controller
             : 'fixed';
         $validated['duration_minutes'] = (int) ($validated['duration_minutes'] ?? 0);
 
+        $this->contentSafety->ensureCleanText([
+            'title' => $validated['title'],
+            'short_description' => $validated['short_description'],
+            'description' => $validated['description'],
+        ]);
+
         unset($validated['category_ids']);
         $validated['is_active'] = $request->boolean('is_active');
         unset($validated['image']);
@@ -297,9 +308,10 @@ class ServiceController extends Controller
             mkdir($directory, 0777, true);
         }
 
-        $this->deleteImage($existingPath);
-
         $file = $request->file('image');
+        $this->contentSafety->inspectImage($file);
+
+        $this->deleteImage($existingPath);
         $filename = now()->format('YmdHis') . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
         $file->move($directory, $filename);
 

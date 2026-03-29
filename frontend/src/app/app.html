@@ -14,6 +14,9 @@
       <div class="header-utility">
         <div class="nav-links">
           <a [href]="backendUrl('/services')">{{ t('servicesNav') }}</a>
+          <a [href]="contactUrl()">Help</a>
+          <a [href]="privacyUrl()">Privacy</a>
+          <a [href]="termsUrl()">Terms</a>
         </div>
 
         <div class="nav-links nav-auth-links">
@@ -641,6 +644,34 @@
               </section>
 
               <section class="card dashboard-block">
+                <h3>Launch operations</h3>
+                <div class="grid grid-2">
+                  <div class="card">
+                    <h3>Support</h3>
+                    <div class="notice">{{ dash.support?.email || supportEmail() }}<br><span class="muted">{{ dash.support?.phone || supportPhone() }}</span></div>
+                    <div class="muted" style="margin-top:10px;">Hours: {{ dash.support?.hours || 'Mon-Sat, 9 AM - 7 PM' }}</div>
+                    <div class="stack-actions" style="margin-top:12px;">
+                      <a class="btn secondary" [href]="dash.operations?.contact_url || contactUrl()">Contact page</a>
+                      <a class="btn brand" [href]="supportWhatsAppUrl()" target="_blank" rel="noopener">WhatsApp support</a>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <h3>Error log health</h3>
+                    @if ((dash.logHealth?.entries ?? []).length > 0) {
+                      @for (entry of dash.logHealth?.entries ?? []; track entry.line) {
+                        <div class="notice">{{ entry.level }}<br><span class="muted">{{ entry.line }}</span></div>
+                      }
+                    } @else {
+                      <div class="notice">{{ dash.logHealth?.message || 'No recent error-level log entries.' }}</div>
+                    }
+                    <div class="stack-actions" style="margin-top:12px;">
+                      <a class="btn secondary" [href]="dash.operations?.provider_onboarding_url || providerOnboardingUrl()">Provider onboarding SOP</a>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card dashboard-block">
                 <h3>Providers</h3>
                 <div class="grid grid-2">
                   @for (provider of dash.providers ?? []; track provider.id) {
@@ -964,6 +995,9 @@
               <div class="notice" style="margin-top:18px;">
                 New here? <a [href]="backendUrl('/register')" style="color: var(--brand-strong); font-weight: 800;">Create account</a>
               </div>
+              <div class="notice" style="margin-top:12px;">
+                Need help? Email {{ supportEmail() }}, call <a [href]="'tel:' + supportPhoneDial()">{{ supportPhone() }}</a>, or <a [href]="supportWhatsAppUrl()" target="_blank" rel="noopener">WhatsApp support</a>.
+              </div>
             } @else {
               <form (ngSubmit)="submitRegister()" style="margin-top:18px;">
                 <div class="form-section auth-section">
@@ -1003,6 +1037,21 @@
   }
 </div>
 
+<footer class="footer">
+  <div class="container footer-shell" style="display:grid;gap:16px;">
+    <div>
+      <strong>GharKaam Pakistan</strong>
+      <div class="muted">Launch support: {{ supportEmail() }} - {{ supportPhone() }}</div>
+    </div>
+    <div class="stack-actions">
+      <a class="btn secondary" [href]="contactUrl()">Contact</a>
+      <a class="btn secondary" [href]="privacyUrl()">Privacy</a>
+      <a class="btn secondary" [href]="termsUrl()">Terms</a>
+      <a class="btn brand" [href]="supportWhatsAppUrl()" target="_blank" rel="noopener">WhatsApp Support</a>
+    </div>
+  </div>
+</footer>
+
 <ng-template #loadingBlock>
   <div class="loading-shell">
     <div class="loading-card card">
@@ -1011,4 +1060,5 @@
     </div>
   </div>
 </ng-template>
+
 

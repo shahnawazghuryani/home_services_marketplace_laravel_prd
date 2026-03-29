@@ -41,5 +41,6 @@ class AppServiceProvider extends ServiceProvider
             'ur' => 'Urdu',
             'sd' => 'Sindhi',
         ]);
+        view()->share('supportContact', config('services.support'));
     }
 }

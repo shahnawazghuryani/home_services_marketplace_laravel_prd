@@ -85,6 +85,29 @@ These endpoints are backed by:
 - `app/Services/AI/MarketplaceAiService.php`
 - `app/Http/Controllers/AiController.php`
 
+## Launch Readiness
+
+This project now includes launch-readiness support for a production marketplace rollout.
+
+Included:
+
+- setup route can be disabled with `ALLOW_SETUP_ROUTE=false`
+- support/contact details are env-driven via `SUPPORT_*`
+- privacy policy, terms, contact/help, and provider onboarding pages
+- booking confirmation emails for customer and provider
+- basic text and image moderation for public-facing content
+- admin dashboard log health summary from `storage/logs/laravel.log`
+- console helpers:
+  - `php artisan marketplace:seed-launch`
+  - `php artisan marketplace:secure-admin --password="new-strong-password"`
+
+Before production launch:
+
+- set a real mail driver instead of `MAIL_MAILER=log`
+- rotate `OPENAI_API_KEY` if it was ever exposed
+- update `SUPPORT_*` values to real business contact details
+- run the admin credential command with a strong password
+
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

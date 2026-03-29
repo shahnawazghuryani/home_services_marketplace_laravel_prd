@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SpaPageController;
@@ -37,6 +38,10 @@ if (! function_exists('serveSpaResponse')) {
 }
 
 Route::get('/', fn () => serveSpaResponse())->name('home');
+Route::get('/contact', [PageController::class, 'contact'])->name('contact');
+Route::get('/privacy-policy', [PageController::class, 'privacy'])->name('privacy');
+Route::get('/terms-and-conditions', [PageController::class, 'terms'])->name('terms');
+Route::get('/provider-onboarding', [PageController::class, 'providerOnboarding'])->name('provider-onboarding');
 
 Route::get('/spa/{any?}', function (?string $any = null) {
     $target = '/' . ltrim((string) $any, '/');
@@ -49,6 +54,7 @@ Route::get('/spa/{any?}', function (?string $any = null) {
 })->where('any', '.*');
 
 Route::get('/_setup/run', function () {
+    abort_unless(config('launch.allow_setup_route'), 404);
     $expectedKey = env('DEPLOY_SETUP_KEY');
     $providedKey = (string) request()->query('key', '');
 

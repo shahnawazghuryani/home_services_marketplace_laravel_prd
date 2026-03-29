@@ -42,4 +42,11 @@ return [
         'timeout' => (int) env('OPENAI_TIMEOUT', 30),
     ],
 
+    'support' => [
+        'email' => config('launch.support.email'),
+        'phone' => config('launch.support.phone'),
+        'whatsapp' => config('launch.support.whatsapp'),
+        'hours' => config('launch.support.hours'),
+    ],
+
 ];

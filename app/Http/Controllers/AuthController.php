@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Provider;
 use App\Models\User;
+use App\Services\ContentSafety;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -13,6 +14,10 @@ use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
+    public function __construct(private readonly ContentSafety $contentSafety)
+    {
+    }
+
     public function showLogin()
     {
         return view('auth.login');
@@ -88,6 +93,13 @@ class AuthController extends Controller
             'availability' => ['nullable', 'string', 'max:255'],
             'redirect_to' => ['nullable', 'string', 'max:500'],
         ]);
+
+        if (($data['role'] ?? null) === 'provider') {
+            $this->contentSafety->ensureCleanText([
+                'bio' => $data['bio'] ?? '',
+                'service_area' => $data['service_area'] ?? '',
+            ]);
+        }
 
         $user = User::create([
             'name' => $data['name'],

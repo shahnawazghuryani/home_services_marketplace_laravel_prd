@@ -29,6 +29,6 @@ class EnsureComingSoonMode
 
     protected function shouldBypass(Request $request): bool
     {
-        return $request->is('_setup/run');
+        return config('launch.allow_setup_route') && $request->is('_setup/run');
     }
 }

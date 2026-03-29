@@ -154,6 +154,21 @@ interface DashboardData {
     comment: string;
     customer_name: string;
   }>;
+  support?: {
+    email: string;
+    phone: string;
+    whatsapp: string;
+    hours: string;
+  };
+  operations?: {
+    contact_url?: string;
+    provider_onboarding_url?: string;
+  };
+  logHealth?: {
+    has_errors: boolean;
+    message?: string | null;
+    entries: Array<{ level: string; line: string }>;
+  };
 }
 
 interface ProviderProfileData {
@@ -630,6 +645,42 @@ export class App {
     }
 
     return this.backendUrl(`/login?redirect=${encodeURIComponent(redirectTo)}`);
+  }
+
+  supportEmail(): string {
+    return this.dashboard()?.support?.email || 'help@gharkaam.pk';
+  }
+
+  supportPhone(): string {
+    return this.dashboard()?.support?.phone || '+92 300 0000000';
+  }
+
+  supportPhoneDial(): string {
+    return this.formatPhone(this.supportPhone());
+  }
+
+  supportWhatsAppNumber(): string {
+    return this.dashboard()?.support?.whatsapp || '923000000000';
+  }
+
+  supportWhatsAppUrl(): string {
+    return `https://wa.me/${this.supportWhatsAppNumber()}`;
+  }
+
+  contactUrl(): string {
+    return this.dashboard()?.operations?.contact_url || this.backendUrl('/contact');
+  }
+
+  privacyUrl(): string {
+    return this.backendUrl('/privacy-policy');
+  }
+
+  termsUrl(): string {
+    return this.backendUrl('/terms-and-conditions');
+  }
+
+  providerOnboardingUrl(): string {
+    return this.dashboard()?.operations?.provider_onboarding_url || this.backendUrl('/provider-onboarding');
   }
 
   goToLoginToBook(slug: string): void {
@@ -1554,3 +1605,4 @@ export class App {
     return this.backendUrl(path.replace('/edit', ''));
   }
 }
+

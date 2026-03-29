@@ -10,6 +10,8 @@ use App\Models\Review;
 use App\Models\Service;
 use App\Models\User;
 use App\Models\WebsiteVisit;
+use App\Services\ContentSafety;
+use App\Services\LogHealth;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +20,12 @@ use Illuminate\Validation\Rule;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly ContentSafety $contentSafety,
+        private readonly LogHealth $logHealth,
+    ) {
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -41,6 +49,7 @@ class DashboardController extends Controller
                 'categories' => Category::latest()->get(),
                 'services' => Service::with(['category', 'categories', 'provider.user'])->latest()->take(12)->get(),
                 'trafficSummary' => $this->adminTrafficSummary(),
+                'logHealth' => $this->logHealth->summary(),
             ]);
         }
 
@@ -109,6 +118,12 @@ class DashboardController extends Controller
                     'role' => $user->role,
                 ],
                 'notifications' => $notifications,
+                'support' => config('services.support'),
+                'operations' => [
+                    'contact_url' => route('contact'),
+                    'provider_onboarding_url' => route('provider-onboarding'),
+                ],
+                'logHealth' => $this->logHealth->summary(),
                 'stats' => $stats,
                 'trafficSummary' => [
                     'today' => $this->adminTrafficSummary()['today'],
@@ -337,6 +352,11 @@ class DashboardController extends Controller
             'availability' => ['required', 'string', 'max:255'],
         ]);
 
+        $this->contentSafety->ensureCleanText([
+            'bio' => $data['bio'],
+            'service_area' => $data['service_area'],
+        ]);
+
         $user->update([
             'name' => $data['name'],
             'phone' => $data['phone'],
@@ -372,6 +392,11 @@ class DashboardController extends Controller
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $this->contentSafety->ensureCleanText([
+            'name' => $data['name'],
+            'description' => $data['description'] ?? '',
+        ]);
+
         Category::create([
             'name' => $data['name'],
             'slug' => Str::slug($data['name']) . '-' . Str::lower(Str::random(4)),
@@ -396,6 +421,11 @@ class DashboardController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'icon' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $this->contentSafety->ensureCleanText([
+            'name' => $data['name'],
+            'description' => $data['description'] ?? '',
         ]);
 
         $category->update([
@@ -480,6 +510,12 @@ class DashboardController extends Controller
             ? (string) $data['price_type']
             : 'fixed';
         $data['duration_minutes'] = (int) ($data['duration_minutes'] ?? 0);
+
+        $this->contentSafety->ensureCleanText([
+            'title' => $data['title'],
+            'short_description' => $data['short_description'],
+            'description' => $data['description'],
+        ]);
 
         $data['category_id'] = $categoryIds[0];
         unset($data['category_ids']);

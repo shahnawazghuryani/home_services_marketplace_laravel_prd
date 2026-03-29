@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\Review;
 use App\Models\Service;
+use App\Services\BookingMailService;
 use App\Support\MarketplaceNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +15,10 @@ use Illuminate\Support\Str;
 
 class BookingController extends Controller
 {
+    public function __construct(private readonly BookingMailService $bookingMailService)
+    {
+    }
+
     public function create(string $slug)
     {
         $service = Service::with(['category', 'provider.user'])->where('slug', $slug)->firstOrFail();
@@ -56,7 +61,8 @@ class BookingController extends Controller
         ]);
 
         MarketplaceNotifier::send($service->provider->user_id, 'New booking request', 'A customer has requested ' . $service->title . '.', 'info', '/dashboard');
-        MarketplaceNotifier::send($request->user()->id, 'Booking submitted', 'Your booking request has been sent to the provider.', 'success', '/dashboard');
+        MarketplaceNotifier::send($request->user()->id, 'Booking submitted', 'Your booking request has been sent to the provider. Need help? Use the support links on the platform.', 'success', '/dashboard');
+        $this->bookingMailService->sendCreated($booking, $service, $request->user(), $service->provider->user);
 
         if ($request->expectsJson()) {
             return response()->json([

@@ -56,6 +56,8 @@ return [
 
     'coming_soon' => (bool) env('COMING_SOON', false),
 
+    'allow_setup_route' => (bool) env('ALLOW_SETUP_ROUTE', false),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
