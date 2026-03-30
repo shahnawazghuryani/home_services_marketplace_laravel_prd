@@ -887,9 +887,6 @@
               <section class="card dashboard-block">
                 <h3>Provider actions</h3>
                 @if (!dash.profile?.approved) {
-                  <div class="notice">
-                    آپ کی پروفائل بن گئی ہے۔ ایڈمن 24 گھنٹے کے اندر، یا اس سے پہلے، آپ کو کنفرمیشن ای میل یا واٹس ایپ پر بھیج دے گا۔ منظوری کے بعد ہی آپ سروس شامل کر سکتے ہیں۔
-                  </div>
                 }
                 <div class="stack-actions">
                   <a class="btn secondary" [href]="dash.actions?.edit_profile_url || '#'">Edit profile</a>
@@ -1112,18 +1109,77 @@
                   }
                   <label>Categories (multiple)
                     <input type="hidden" name="category_id" [ngModel]="serviceForm.category_ids[0] || ''">
-                    <div class="category-chip-wrap">
-                      @for (category of serviceFormData()?.categories ?? []; track category.id) {
-                        <button
-                          type="button"
-                          class="category-chip"
-                          [class.active]="isServiceCategorySelected(category.id)"
-                          (click)="toggleServiceCategory(category.id)">
-                          {{ category.name }}
-                        </button>
+                    <div class="service-category-select" (focusout)="deferCloseServiceCategoryMenu()">
+                      <button
+                        type="button"
+                        class="service-category-trigger"
+                        [class.open]="serviceCategoryMenuOpen()"
+                        (click)="openServiceCategoryMenu()">
+                        <span class="service-category-trigger-text">
+                          @if (selectedServiceCategoryNames().length) {
+                            {{ selectedServiceCategoryNames().join(', ') }}
+                          } @else {
+                            Search and select categories
+                          }
+                        </span>
+                      </button>
+
+                      @if (selectedServiceCategories().length) {
+                        <div class="service-category-selected">
+                          @for (category of selectedServiceCategories(); track category.id) {
+                            <button type="button" class="service-category-pill">
+                              <span>{{ category.name }}</span>
+                              <span
+                                class="service-category-pill-remove"
+                                (click)="removeServiceCategory(category.id)">
+                                x
+                              </span>
+                            </button>
+                          }
+                        </div>
+                      }
+
+                      @if (serviceCategoryMenuOpen()) {
+                        <div class="service-category-dropdown">
+                          <input
+                            type="text"
+                            class="service-category-search"
+                            [ngModel]="serviceCategorySearch()"
+                            (ngModelChange)="serviceCategorySearch.set($event)"
+                            (focus)="openServiceCategoryMenu()"
+                            placeholder="Search categories">
+
+                          <div class="service-category-options">
+                            @if (canCreateServiceCategory()) {
+                              <button
+                                type="button"
+                                class="service-category-option service-category-create"
+                                (mousedown)="$event.preventDefault()"
+                                (click)="createServiceCategory()">
+                                <span>Add "{{ serviceCategorySearch().trim() }}"</span>
+                                <span class="service-category-check">{{ serviceCategoryCreateLoading() ? 'Adding...' : 'New' }}</span>
+                              </button>
+                            }
+                            @for (category of filteredServiceFormCategories(); track category.id) {
+                              <button
+                                type="button"
+                                class="service-category-option"
+                                [class.active]="isServiceCategorySelected(category.id)"
+                                (mousedown)="$event.preventDefault()"
+                                (click)="toggleServiceCategory(category.id)">
+                                <span>{{ category.name }}</span>
+                                @if (isServiceCategorySelected(category.id)) {
+                                  <span class="service-category-check">Selected</span>
+                                }
+                              </button>
+                            } @empty {
+                              <div class="service-category-empty">No category found</div>
+                            }
+                          </div>
+                        </div>
                       }
                     </div>
-                    <small class="muted">Multiple categories select karne ke liye chips par click karein.</small>
+                    <small class="muted">Search karke multiple categories select karein.</small>
                   </label>
                   <label>Service title<input type="text" name="title" [(ngModel)]="serviceForm.title" required></label>
                   <label>Short description<input type="text" name="short_description" [(ngModel)]="serviceForm.short_description" maxlength="255" placeholder="Quick one-line summary"></label>
@@ -1208,9 +1264,6 @@
                 @if (registerForm.role === 'provider') {
                   <div class="form-section auth-section">
                     <div class="form-section-title">Professional profile</div>
-                    <div class="notice">
-                      آپ کی پروفائل بن جائے گی۔ ایڈمن 24 گھنٹے کے اندر، یا اس سے پہلے، آپ کو کنفرمیشن ای میل یا واٹس ایپ پر بھیج دے گا۔ منظوری کے بعد ہی آپ سروس شامل کر سکتے ہیں۔
-                    </div>
                     <div class="grid grid-2">
                       <label>Service area<input type="text" name="service_area" [(ngModel)]="registerForm.service_area" placeholder="DHA, Gulshan, Clifton"></label>
                       <label>Experience years<input type="number" name="experience_years" [(ngModel)]="registerForm.experience_years"></label>

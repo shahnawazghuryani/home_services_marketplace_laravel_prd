@@ -230,6 +230,35 @@ class ServiceController extends Controller
         ]);
     }
 
+    public function storeCategoryOption(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user && ($user->isAdmin() || ($user->isProvider() && $user->providerProfile?->approved_at)), 403);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255', 'unique:categories,name'],
+        ]);
+
+        $this->contentSafety->ensureCleanText([
+            'name' => $validated['name'],
+        ]);
+
+        $category = Category::create([
+            'name' => trim($validated['name']),
+            'slug' => Str::slug($validated['name']) . '-' . Str::lower(Str::random(4)),
+            'description' => null,
+            'icon' => null,
+        ]);
+
+        return response()->json([
+            'message' => 'Category created successfully.',
+            'category' => [
+                'id' => $category->id,
+                'name' => $category->name,
+            ],
+        ]);
+    }
+
     protected function validateService(Request $request): array
     {
         $validated = $request->validate([

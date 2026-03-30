@@ -657,6 +657,8 @@ export class App {
   readonly categoryInput = signal('');
   readonly locationMenuOpen = signal(false);
   readonly categoryMenuOpen = signal(false);
+  readonly serviceCategoryMenuOpen = signal(false);
+  readonly serviceCategorySearch = signal('');
   readonly locale = signal<LocaleKey>('en');
   readonly currentLocationText = signal(COPY.ur['allowLocation']);
   readonly currentPath = signal(this.readPath());
@@ -818,6 +820,7 @@ export class App {
   generatedServiceImagePreview = '';
   readonly aiServiceBuilderLoading = signal(false);
   readonly aiServiceBuilderResult = signal<AiServiceBuilderResponse | null>(null);
+  readonly serviceCategoryCreateLoading = signal(false);
   serviceCategoryExpanded: Record<number, boolean> = {};
   dashboardActionLoading = '';
   dashboardCategoryForm = {
@@ -1200,6 +1203,90 @@ export class App {
     this.categoryInput.set('');
     this.categoryMenuOpen.set(false);
     this.submitServiceSearch();
+  }
+
+  openServiceCategoryMenu(): void {
+    this.serviceCategoryMenuOpen.set(true);
+  }
+
+  closeServiceCategoryMenu(): void {
+    this.serviceCategoryMenuOpen.set(false);
+  }
+
+  deferCloseServiceCategoryMenu(): void {
+    window.setTimeout(() => this.serviceCategoryMenuOpen.set(false), 120);
+  }
+
+  filteredServiceFormCategories(): Array<{ id: number; name: string }> {
+    const categories = this.serviceFormData()?.categories ?? [];
+    const term = this.serviceCategorySearch().trim().toLowerCase();
+
+    return categories.filter((category) => !term || category.name.toLowerCase().includes(term));
+  }
+
+  canCreateServiceCategory(): boolean {
+    const term = this.serviceCategorySearch().trim();
+    if (!term) {
+      return false;
+    }
+
+    return !(this.serviceFormData()?.categories ?? [])
+      .some((category) => category.name.toLowerCase() === term.toLowerCase());
+  }
+
+  selectedServiceCategoryNames(): string[] {
+    const selected = new Set(this.serviceForm.category_ids);
+    return (this.serviceFormData()?.categories ?? [])
+      .filter((category) => selected.has(String(category.id)))
+      .map((category) => category.name);
+  }
+
+  selectedServiceCategories(): Array<{ id: number; name: string }> {
+    const selected = new Set(this.serviceForm.category_ids);
+    return (this.serviceFormData()?.categories ?? [])
+      .filter((category) => selected.has(String(category.id)));
+  }
+
+  removeServiceCategory(categoryId: number | string): void {
+    if (this.isServiceCategorySelected(categoryId)) {
+      this.toggleServiceCategory(categoryId);
+    }
+  }
+
+  createServiceCategory(): void {
+    const name = this.serviceCategorySearch().trim();
+    if (!name || this.serviceCategoryCreateLoading()) {
+      return;
+    }
+
+    this.serviceCategoryCreateLoading.set(true);
+    this.authError.set('');
+
+    this.http.post<{ message: string; category: { id: number; name: string } }>(this.backendUrl('/service-categories'), {
+      name,
+    }, {
+      headers: this.authHeaders(),
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          const current = this.serviceFormData();
+          if (current) {
+            this.serviceFormData.set({
+              ...current,
+              categories: [...current.categories, response.category].sort((a, b) => a.name.localeCompare(b.name)),
+            });
+          }
+
+          this.serviceCategorySearch.set('');
+          this.toggleServiceCategory(response.category.id);
+          this.serviceCategoryMenuOpen.set(true);
+          this.serviceCategoryCreateLoading.set(false);
+        },
+        error: (error) => {
+          this.serviceCategoryCreateLoading.set(false);
+          this.authError.set(error?.error?.message ?? 'Category create nahi ho saki.');
+        }
+      });
   }
 
   applyQuickSearch(search: string, category = '', location = ''): void {

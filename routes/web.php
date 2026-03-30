@@ -116,6 +116,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', fn () => serveSpaResponse())->name('dashboard');
     Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('dashboard.data');
+    Route::post('/service-categories', [ServiceController::class, 'storeCategoryOption'])->name('service-categories.store');
 
     Route::middleware('role:customer')->group(function () {
         Route::get('/services/{slug}/book', fn () => serveSpaResponse())->name('bookings.create');
