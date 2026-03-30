@@ -40,3 +40,37 @@ Artisan::command('marketplace:secure-admin {email?} {--new-email=} {--password=}
     $this->info('Admin credentials updated successfully.');
     return 0;
 })->purpose('Secure the production admin account with a fresh password and optional email/name changes.');
+
+Artisan::command('marketplace:sync-primary-admin {email} {--name=Primary Admin} {--password=}', function (string $email) {
+    $password = (string) $this->option('password');
+    if ($password === '') {
+        $password = bin2hex(random_bytes(8));
+        $this->warn('No password provided. Generated temporary password: ' . $password);
+    }
+
+    $admin = User::query()->firstOrCreate(
+        ['email' => $email],
+        [
+            'name' => (string) $this->option('name'),
+            'phone' => '03000000000',
+            'role' => 'admin',
+            'city' => 'Karachi',
+            'address' => 'Admin Office',
+            'password' => Hash::make($password),
+        ]
+    );
+
+    $admin->update([
+        'name' => $admin->name ?: (string) $this->option('name'),
+        'role' => 'admin',
+        'password' => Hash::make($password),
+    ]);
+
+    User::query()
+        ->where('role', 'admin')
+        ->where('id', '!=', $admin->id)
+        ->delete();
+
+    $this->info('Primary admin synced successfully for ' . $email);
+    return 0;
+})->purpose('Keep exactly one admin account and remove all other admin users.');

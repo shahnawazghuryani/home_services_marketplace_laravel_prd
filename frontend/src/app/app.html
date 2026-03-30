@@ -26,8 +26,8 @@
 
       <div class="header-utility" [class.mobile-open]="mobileNavOpen()">
         <div class="mobile-drawer-head">
-          <strong>Menu</strong>
-          <button type="button" class="mobile-drawer-close" (click)="closeMobileNav()" aria-label="Close menu">Close</button>
+          <strong>{{ t('menu') }}</strong>
+          <button type="button" class="mobile-drawer-close" (click)="closeMobileNav()" [attr.aria-label]="t('close')">{{ t('close') }}</button>
         </div>
 
         <div class="nav-links">
@@ -36,7 +36,7 @@
 
         <div class="nav-links nav-auth-links">
           @if (isAuthenticatedUiState()) {
-            <a class="btn secondary nav-login nav-mini-btn" [href]="backendUrl('/dashboard')" (click)="closeMobileNav()">Dashboard</a>
+            <a class="btn secondary nav-login nav-mini-btn" [href]="backendUrl('/dashboard')" (click)="closeMobileNav()">{{ t('dashboard') }}</a>
             <button type="button" class="btn brand nav-login" (click)="logout()">Logout</button>
           } @else {
             @if (!isLoginPage()) {
@@ -170,7 +170,7 @@
                         <span class="service-review-stars">{{ ratingStars(service.provider.rating_avg) }}</span>
                         <span class="service-review-text">{{ ratingValue(service.provider.rating_avg) | number:'1.0-1' }} ({{ reviewsCount(service.provider.reviews_count) }} reviews)</span>
                       } @else {
-                        <span class="service-review-empty">No reviews yet</span>
+                        <span class="service-review-empty">{{ t('noReviewsYet') }}</span>
                       }
                     </div>
 
@@ -207,7 +207,7 @@
                   <div class="notice">{{ provider.city }} - {{ provider.experience_years }} {{ t('yearsExperience') }} - PKR {{ provider.hourly_rate | number:'1.0-0' }}/hr</div>
 
                     <div class="stack-actions">
-                      <a class="btn secondary" [href]="backendUrl('/providers/' + provider.id)">Profile</a>
+                      <a class="btn secondary" [href]="backendUrl('/providers/' + provider.id)">{{ t('profile') }}</a>
                       <a class="btn secondary" [href]="'tel:' + formatPhone(provider.phone)">{{ t('call') }}</a>
                     <a class="btn brand" [href]="'https://wa.me/' + formatPhone(provider.phone)" target="_blank" rel="noopener">{{ t('whatsapp') }}</a>
                   </div>
@@ -224,9 +224,9 @@
           <section class="section guide-section" id="urdu-guides">
             <div class="section-head">
               <div>
-                <h2>User Guide</h2>
+                <h2>{{ t('userGuide') }}</h2>
               </div>
-              <a class="btn secondary" [href]="supportWhatsAppUrl()" target="_blank" rel="noopener">Guide on WhatsApp</a>
+              <a class="btn secondary" [href]="supportWhatsAppUrl()" target="_blank" rel="noopener">{{ t('guideOnWhatsApp') }}</a>
             </div>
 
             <div class="grid grid-3 guide-grid">
@@ -249,7 +249,7 @@
                       }
                     </div>
                     <div class="stack-actions">
-                      <button type="button" class="btn secondary" (click)="openGuideVideo(guide)">Preview guide</button>
+                      <button type="button" class="btn secondary" (click)="openGuideVideo(guide)">{{ t('previewGuide') }}</button>
                       <a class="btn brand" [href]="supportWhatsAppUrl()" target="_blank" rel="noopener">WhatsApp se mangwayen</a>
                     </div>
                   </div>
@@ -264,7 +264,7 @@
     <main class="page">
       <div class="container search-layout">
         @if (pageLoading()) {
-          <div class="loading-card card"><h2>Loading services...</h2></div>
+          <div class="loading-card card"><h2>{{ t('loadingServices') }}</h2></div>
         } @else if (servicesPageData(); as list) {
           <section class="section" id="services">
             <div class="search-shell services-search-shell">
@@ -341,7 +341,7 @@
 
             <div class="results-head">
               <div>
-                <h2 style="margin:0 0 8px;">Services for users</h2>
+                <h2 style="margin:0 0 8px;">{{ t('servicesForUsers') }}</h2>
                 <div class="search-summary">{{ list.summary.results }} result(s) found</div>
               </div>
             </div>
@@ -386,12 +386,12 @@
                         <span class="service-review-stars">{{ ratingStars(service.provider.rating_avg) }}</span>
                         <span class="service-review-text">{{ ratingValue(service.provider.rating_avg) | number:'1.0-1' }} ({{ reviewsCount(service.provider.reviews_count) }} reviews)</span>
                       } @else {
-                        <span class="service-review-empty">No reviews yet</span>
+                        <span class="service-review-empty">{{ t('noReviewsYet') }}</span>
                       }
                     </div>
                     <div class="stack-actions">
                       <a class="btn brand" [href]="backendUrl('/services/' + service.slug)">{{ t('viewDetails') }}</a>
-                      <a class="btn secondary" [href]="backendUrl('/providers/' + service.provider.id)">Provider</a>
+                      <a class="btn secondary" [href]="backendUrl('/providers/' + service.provider.id)">{{ t('provider') }}</a>
                     </div>
                   </div>
                 </article>
@@ -412,7 +412,7 @@
     <main class="page">
       <div class="container">
         @if (pageLoading()) {
-          <div class="loading-card card"><h2>Loading service details...</h2></div>
+          <div class="loading-card card"><h2>{{ t('loadingServiceDetails') }}</h2></div>
         } @else if (serviceDetailData(); as detail) {
           <div class="detail-grid">
             <div class="card detail-panel">
@@ -430,13 +430,13 @@
                 @if (hasPositiveNumber(detail.service.duration_minutes)) {
                   <div class="meta-box"><strong>Duration</strong><div>{{ detail.service.duration_minutes }} minutes</div></div>
                 }
-                <div class="meta-box"><strong>Provider</strong><div>{{ detail.service.provider.name }}</div></div>
+                <div class="meta-box"><strong>{{ t('provider') }}</strong><div>{{ detail.service.provider.name }}</div></div>
                 @if (hasText(detail.service.price_type) && hasPositiveNumber(detail.service.price)) {
                   <div class="meta-box"><strong>Price type</strong><div>{{ detail.service.price_type }}</div></div>
                 }
               </div>
               <div class="notice">{{ detail.service.description }}</div>
-              <div class="notice detail-note">Service area: {{ detail.provider_location_label }}</div>
+              <div class="notice detail-note">{{ t('serviceArea') }}: {{ detail.provider_location_label }}</div>
               <div class="notice detail-note">
                 <strong>Phone</strong>
                 <div>{{ detail.service.provider.phone }}</div>
@@ -447,15 +447,15 @@
                 } @else if (!detail.auth.logged_in) {
                   <button type="button" class="btn brand" (click)="goToLoginToBook(detail.service.slug)">Login to book</button>
                 }
-                <a class="btn secondary" [href]="'tel:' + formatPhone(detail.service.provider.phone)">Call provider</a>
+                <a class="btn secondary" [href]="'tel:' + formatPhone(detail.service.provider.phone)">{{ t('callProvider') }}</a>
                 <a class="btn brand" [href]="'https://wa.me/' + formatPhone(detail.service.provider.phone)" target="_blank" rel="noopener">WhatsApp</a>
                 <a class="btn secondary" [href]="backendUrl('/providers/' + detail.service.provider.id)">View provider</a>
               </div>
               <div class="notice detail-note">
-                <strong>AI Provider Match</strong>
+                <strong>{{ t('aiProviderMatch') }}</strong>
                 <p class="detail-ai-copy">AI isi problem ke liye alternative providers recommend kar sakta hai.</p>
                 <div class="stack-actions">
-                  <button type="button" class="btn secondary" (click)="runAiProviderRecommendations()" [disabled]="aiProviderLoading()">{{ aiProviderLoading() ? 'Finding...' : 'Get AI Recommendations' }}</button>
+                  <button type="button" class="btn secondary" (click)="runAiProviderRecommendations()" [disabled]="aiProviderLoading()">{{ aiProviderLoading() ? t('finding') : t('getAiRecommendations') }}</button>
                 </div>
                 @if (aiProviderResult(); as providerAi) {
                   <div class="notice detail-ai-result">
@@ -467,7 +467,7 @@
                         <div><strong>Phone:</strong> {{ provider.phone }}</div>
                         <div class="muted">{{ provider.reason }}</div>
                         <div class="stack-actions">
-                          <a class="btn secondary" [href]="'tel:' + formatPhone(provider.phone)">Call now</a>
+                          <a class="btn secondary" [href]="'tel:' + formatPhone(provider.phone)">{{ t('callNow') }}</a>
                           <a class="btn brand" [href]="'https://wa.me/' + formatPhone(provider.phone)" target="_blank" rel="noopener">WhatsApp</a>
                         </div>
                       </div>
@@ -478,12 +478,12 @@
             </div>
             <div class="card map-card">
               <div>
-                <h3>Provider location</h3>
-                <p class="muted">Location ko map par dekhein aur area quickly samajh lein.</p>
+                <h3>{{ t('providerLocation') }}</h3>
+                <p class="muted">{{ t('providerLocationHint') }}</p>
               </div>
               <div class="location-row">
                 <span class="badge">{{ detail.service.provider.city }}</span>
-                <a class="location-link" [href]="detail.provider_map_search_url" target="_blank" rel="noopener">Open in Google Maps</a>
+                <a class="location-link" [href]="detail.provider_map_search_url" target="_blank" rel="noopener">{{ t('openInGoogleMaps') }}</a>
               </div>
               <div class="notice">{{ detail.provider_location_label }}</div>
               <iframe class="map-embed" [attr.src]="detail.provider_map_url" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Provider location map"></iframe>
@@ -507,7 +507,7 @@
     <main class="page">
       <div class="container">
         @if (pageLoading()) {
-          <div class="loading-card card"><h2>Loading provider details...</h2></div>
+          <div class="loading-card card"><h2>{{ t('loadingProviderDetails') }}</h2></div>
         } @else if (providerDetailData(); as detail) {
           <div class="grid grid-2">
             <div class="card map-card">
@@ -523,12 +523,12 @@
                 <div>{{ detail.provider.phone }}</div>
               </div>
               <div class="stack-actions">
-                <a class="btn secondary" [href]="'tel:' + formatPhone(detail.provider.phone)">Call now</a>
+                <a class="btn secondary" [href]="'tel:' + formatPhone(detail.provider.phone)">{{ t('callNow') }}</a>
                 <a class="btn brand" [href]="'https://wa.me/' + formatPhone(detail.provider.phone)" target="_blank" rel="noopener">WhatsApp</a>
               </div>
               <div class="location-row">
                 <div class="notice">{{ detail.location_label }}</div>
-                <a class="location-link" [href]="detail.provider_map_search_url" target="_blank" rel="noopener">Open in Google Maps</a>
+                <a class="location-link" [href]="detail.provider_map_search_url" target="_blank" rel="noopener">{{ t('openInGoogleMaps') }}</a>
               </div>
               <iframe class="map-embed" [attr.src]="detail.provider_map_url" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Provider location map"></iframe>
             </div>
@@ -571,14 +571,14 @@
     <main class="page">
       <div class="container auth-shell">
         @if (pageLoading()) {
-          <div class="loading-card card"><h2>Loading booking form...</h2></div>
+          <div class="loading-card card"><h2>{{ t('loadingBookingForm') }}</h2></div>
         } @else if (bookingCreateData(); as bookingPage) {
           <div class="auth-grid service-form-shell">
             <div class="auth-showcase">
               <span class="kicker">Booking Request</span>
               <h2>{{ bookingPage.service.title }}</h2>
               <div class="list" style="margin-top:22px;">
-                <div class="notice">Provider: {{ bookingPage.service.provider_name }}</div>
+                <div class="notice">{{ t('provider') }}: {{ bookingPage.service.provider_name }}</div>
                 @if (hasPositiveNumber(bookingPage.service.price)) {
                   <div class="notice">Price: PKR {{ bookingPage.service.price | number:'1.0-0' }}</div>
                 }
@@ -596,7 +596,7 @@
                 <strong>AI Booking Helper</strong>
                 <p style="margin:10px 0 0;">Agar notes unclear hain to AI provider-friendly summary bana dega.</p>
                 <div class="stack-actions">
-                  <button type="button" class="btn secondary" (click)="runAiBookingHelper()" [disabled]="aiBookingLoading()">{{ aiBookingLoading() ? 'Thinking...' : 'Improve with AI' }}</button>
+                  <button type="button" class="btn secondary" (click)="runAiBookingHelper()" [disabled]="aiBookingLoading()">{{ aiBookingLoading() ? t('thinking') : t('improveWithAi') }}</button>
                 </div>
                 @if (aiBookingResult(); as bookingAi) {
                   <div class="notice" style="margin-top:12px;">
@@ -627,7 +627,7 @@
                   </div>
                 </div>
                 <div class="form-section">
-                  <div class="form-section-title">Location</div>
+                  <div class="form-section-title">{{ t('location') }}</div>
                   <label>Service address<input type="text" name="address" [(ngModel)]="bookingForm.address" placeholder="Complete service address" required></label>
                 </div>
                 <div class="form-section">
@@ -635,7 +635,7 @@
                   <label>Notes<textarea name="notes" [(ngModel)]="bookingForm.notes" placeholder="Any issue details, floor number, timing notes"></textarea></label>
                 </div>
                 <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                  <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : 'Confirm booking' }}</button>
+                  <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : t('confirmBooking') }}</button>
                   <a class="btn secondary" [href]="backendUrl('/services/' + bookingPage.service.slug)">Back</a>
                 </div>
               </form>
@@ -650,7 +650,7 @@
     <main class="page">
       <div class="container">
         @if (dashboardLoading()) {
-          <div class="loading-card card"><h2>Loading dashboard...</h2></div>
+          <div class="loading-card card"><h2>{{ t('loadingDashboard') }}</h2></div>
         } @else if (dashboard(); as dash) {
           <div class="dashboard-page">
             @if (authError()) {
@@ -1019,32 +1019,32 @@
     <main class="page">
       <div class="container auth-shell">
         @if (pageLoading()) {
-          <div class="loading-card card"><h2>Loading profile...</h2></div>
+          <div class="loading-card card"><h2>{{ t('loadingProfile') }}</h2></div>
         } @else {
           <div class="auth-grid">
             <div class="auth-showcase">
-              <span class="kicker">Provider Profile</span>
+              <span class="kicker">{{ t('providerProfile') }}</span>
               <h2>Apni profile ko professional banayein.</h2>
               <p>Personal details, service area, availability, aur bio yahin update karein.</p>
             </div>
             <div class="auth-card">
               <span class="badge">Edit profile</span>
-              <h1>Provider profile settings</h1>
+              <h1>{{ t('providerProfileSettings') }}</h1>
               @if (authError()) { <div class="flash error">{{ authError() }}</div> }
               <form (ngSubmit)="submitProviderProfile()">
                 <div class="grid grid-2">
-                  <label>Full name<input type="text" name="name" [(ngModel)]="providerProfileForm.name" required></label>
-                  <label>Phone<input type="text" name="phone" [(ngModel)]="providerProfileForm.phone" required></label>
-                  <label>City<input type="text" name="city" [(ngModel)]="providerProfileForm.city" required></label>
-                  <label>Address<input type="text" name="address" [(ngModel)]="providerProfileForm.address" required></label>
-                  <label>Experience years<input type="number" name="experience_years" [(ngModel)]="providerProfileForm.experience_years" required></label>
-                  <label>Hourly rate<input type="number" name="hourly_rate" [(ngModel)]="providerProfileForm.hourly_rate" required></label>
-                  <label>Service area<input type="text" name="service_area" [(ngModel)]="providerProfileForm.service_area" required></label>
-                  <label>Availability<input type="text" name="availability" [(ngModel)]="providerProfileForm.availability" required></label>
+                  <label>{{ t('fullName') }}<input type="text" name="name" [(ngModel)]="providerProfileForm.name" required></label>
+                  <label>{{ t('phone') }}<input type="text" name="phone" [(ngModel)]="providerProfileForm.phone" required></label>
+                  <label>{{ t('city') }}<input type="text" name="city" [(ngModel)]="providerProfileForm.city" required></label>
+                  <label>{{ t('address') }}<input type="text" name="address" [(ngModel)]="providerProfileForm.address" required></label>
+                  <label>{{ t('experienceYears') }}<input type="number" name="experience_years" [(ngModel)]="providerProfileForm.experience_years" required></label>
+                  <label>{{ t('hourlyRate') }}<input type="number" name="hourly_rate" [(ngModel)]="providerProfileForm.hourly_rate" required></label>
+                  <label>{{ t('serviceAreaField') }}<input type="text" name="service_area" [(ngModel)]="providerProfileForm.service_area" required></label>
+                  <label>{{ t('availability') }}<input type="text" name="availability" [(ngModel)]="providerProfileForm.availability" required></label>
                 </div>
-                <label>Bio<textarea name="bio" [(ngModel)]="providerProfileForm.bio" required></textarea></label>
+                <label>{{ t('bio') }}<textarea name="bio" [(ngModel)]="providerProfileForm.bio" required></textarea></label>
                 <div class="stack-actions">
-                  <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : 'Save profile' }}</button>
+                  <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : t('saveProfile') }}</button>
                   <a class="btn secondary" [href]="backendUrl('/dashboard')">Back to dashboard</a>
                 </div>
               </form>
@@ -1057,7 +1057,7 @@
     <main class="page">
       <div class="container auth-shell">
         @if (pageLoading()) {
-          <div class="loading-card card"><h2>Loading service form...</h2></div>
+          <div class="loading-card card"><h2>{{ t('loadingServiceForm') }}</h2></div>
         } @else {
           <div class="auth-grid service-form-shell">
             <div class="auth-showcase">
@@ -1066,18 +1066,18 @@
               <p>{{ isAdminServiceEditPage() ? 'Provider, category, pricing aur active status sab yahin se control hoga.' : 'Category, title, description, price, duration aur image yahin se manage karein.' }}</p>
             </div>
             <div class="auth-card">
-              <span class="badge">{{ isAdminServiceEditPage() ? 'Admin Edit' : (isProviderServiceCreatePage() ? 'Add service' : 'Edit service') }}</span>
+              <span class="badge">{{ isAdminServiceEditPage() ? t('adminEdit') : (isProviderServiceCreatePage() ? t('addService') : t('editService')) }}</span>
               <h1>{{ isAdminServiceEditPage() ? 'Service editor' : 'Service details' }}</h1>
               @if (authError()) { <div class="flash error">{{ authError() }}</div> }
               <div class="notice" style="margin-bottom:16px;">
                 <strong>AI Service Builder</strong>
                 <p style="margin:10px 0 0;">Simple text likhein, jaise: <em>mere pass plumber aur electrical service hai</em>. Hum title, category, description, price, duration aur soft image draft bana denge.</p>
                 <label style="margin-top:12px;">
-                  Provider prompt
+                  {{ t('providerPrompt') }}
                   <textarea name="service_builder_prompt" [(ngModel)]="serviceBuilderPrompt" placeholder="Plumber, electrical, AC service, installation, repair..." rows="3"></textarea>
                 </label>
                 <div class="stack-actions" style="margin-top:12px;">
-                  <button type="button" class="btn secondary" (click)="runAiServiceBuilder()" [disabled]="aiServiceBuilderLoading()">{{ aiServiceBuilderLoading() ? 'Generating...' : 'Generate service draft' }}</button>
+                  <button type="button" class="btn secondary" (click)="runAiServiceBuilder()" [disabled]="aiServiceBuilderLoading()">{{ aiServiceBuilderLoading() ? t('generating') : t('generateServiceDraft') }}</button>
                 </div>
                 @if (aiServiceBuilderResult(); as draft) {
                   <div class="notice" style="margin-top:12px;">
@@ -1137,7 +1137,7 @@
                 </div>
                 <label>Full description<textarea name="description" [(ngModel)]="serviceForm.description" required></textarea></label>
                 <div class="stack-actions">
-                  <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : 'Save changes' }}</button>
+                  <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : t('saveChanges') }}</button>
                   <a class="btn secondary" [href]="backendUrl('/dashboard')">Back to dashboard</a>
                 </div>
               </form>
@@ -1173,7 +1173,7 @@
                 <label>Password
                   <input type="password" name="password" [(ngModel)]="loginForm.password" placeholder="Enter your password" required>
                 </label>
-                <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : 'Login Now' }}</button>
+                <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : t('loginNow') }}</button>
               </form>
               <div class="notice" style="margin-top:18px;">
                 New here? <a [href]="backendUrl('/register')" style="color: var(--brand-strong); font-weight: 800;">Create account</a>
@@ -1189,7 +1189,7 @@
                   <label>Full name<input type="text" name="name" [(ngModel)]="registerForm.name" placeholder="Enter full name" required></label>
                   <label>Email<input type="email" name="email" [(ngModel)]="registerForm.email" placeholder="Enter email" required></label>
                   <label>Phone<input type="text" name="phone" [(ngModel)]="registerForm.phone" placeholder="03xx-xxxxxxx" required></label>
-                  <label>Role<select name="role" [(ngModel)]="registerForm.role"><option value="customer">Customer</option><option value="provider">Service Provider</option></select></label>
+                  <label>{{ t('role') }}<select name="role" [(ngModel)]="registerForm.role"><option value="customer">{{ t('customer') }}</option><option value="provider">{{ t('serviceProvider') }}</option></select></label>
                   <label>City<input type="text" name="city" [(ngModel)]="registerForm.city" placeholder="Karachi" required></label>
                   <label>Address<input type="text" name="address" [(ngModel)]="registerForm.address" placeholder="Street, area, city" required></label>
                   <label>Password<input type="password" name="password" [(ngModel)]="registerForm.password" placeholder="Create password" required></label>
@@ -1210,7 +1210,7 @@
                     </label>
                   </div>
                 }
-                <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : 'Create account' }}</button>
+                <button class="btn brand" type="submit" [disabled]="authLoading()">{{ authLoading() ? 'Please wait...' : t('createAccount') }}</button>
               </form>
             }
           </div>
@@ -1228,7 +1228,7 @@
     </svg>
   </span>
   <span class="whatsapp-float-copy">
-    <strong>WhatsApp Help</strong>
+    <strong>{{ t('whatsappHelp') }}</strong>
     <small>{{ supportPhone() }}</small>
   </span>
 </a>
@@ -1241,7 +1241,7 @@
         <span class="badge">{{ guideModal.audience }}</span>
         <h3>{{ guideModal.title }}</h3>
       </div>
-      <button type="button" class="guide-modal-close" (click)="closeGuideVideo()">Close</button>
+      <button type="button" class="guide-modal-close" (click)="closeGuideVideo()">{{ t('closeGuide') }}</button>
     </div>
 
     @if (guideModal.videoType === 'youtube' && guideModal.videoEmbedUrl) {

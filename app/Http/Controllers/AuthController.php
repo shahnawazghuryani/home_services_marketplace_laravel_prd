@@ -10,6 +10,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
@@ -112,7 +114,7 @@ class AuthController extends Controller
         ]);
 
         if ($user->isProvider()) {
-            Provider::create([
+            $provider = Provider::create([
                 'user_id' => $user->id,
                 'bio' => $data['bio'] ?? 'Newly onboarded service provider.',
                 'experience_years' => $data['experience_years'] ?? 0,
@@ -122,6 +124,8 @@ class AuthController extends Controller
                 'approved_at' => null,
                 'is_featured' => false,
             ]);
+
+            $this->notifyAdminForProviderApproval($provider);
         }
 
         Auth::login($user);
@@ -171,5 +175,37 @@ class AuthController extends Controller
         }
 
         return $redirectTo;
+    }
+
+    private function notifyAdminForProviderApproval(Provider $provider): void
+    {
+        $adminEmail = (string) env('ADMIN_APPROVAL_EMAIL', 'shahnawazghuryani@gmail.com');
+        if ($adminEmail === '') {
+            return;
+        }
+
+        $provider->loadMissing('user');
+
+        $approveUrl = URL::temporarySignedRoute(
+            'admin.providers.approval-link',
+            now()->addDays(7),
+            ['provider' => $provider->id, 'action' => 'approve']
+        );
+
+        $deactivateUrl = URL::temporarySignedRoute(
+            'admin.providers.approval-link',
+            now()->addDays(7),
+            ['provider' => $provider->id, 'action' => 'deactivate']
+        );
+
+        Mail::send('emails.provider-approval-request', [
+            'provider' => $provider,
+            'user' => $provider->user,
+            'approveUrl' => $approveUrl,
+            'deactivateUrl' => $deactivateUrl,
+        ], function ($message) use ($adminEmail, $provider): void {
+            $message->to($adminEmail)
+                ->subject('New provider approval request: ' . $provider->user->name);
+        });
     }
 }

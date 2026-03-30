@@ -100,6 +100,10 @@ Route::get('/services/{slug}/data', [SpaPageController::class, 'serviceShow'])->
 Route::get('/providers/{provider}', fn () => serveSpaResponse())->name('providers.show');
 Route::get('/providers/{provider}/data', [SpaPageController::class, 'providerShow'])->name('providers.show.data');
 Route::get('/auth/state', [AuthController::class, 'state'])->name('auth.state');
+Route::get('/admin/provider-approval/{provider}/{action}', [DashboardController::class, 'providerApprovalLink'])
+    ->middleware('signed')
+    ->where('action', 'approve|deactivate')
+    ->name('admin.providers.approval-link');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', fn () => serveSpaResponse())->name('login');

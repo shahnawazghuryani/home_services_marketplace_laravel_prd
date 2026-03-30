@@ -16,6 +16,7 @@ use App\Services\LogHealth;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -635,18 +636,7 @@ class DashboardController extends Controller
 
     public function approveProvider(Provider $provider): RedirectResponse|JsonResponse
     {
-        $provider->update([
-            'approved_at' => $provider->approved_at ? null : now(),
-        ]);
-
-        MarketplaceNotification::create([
-            'user_id' => $provider->user_id,
-            'title' => $provider->approved_at ? 'Profile approved' : 'Approval pending',
-            'message' => $provider->approved_at ? 'Your provider profile is now live for customers.' : 'Your provider profile was moved back to pending review.',
-            'type' => $provider->approved_at ? 'success' : 'warning',
-            'action_url' => '/dashboard',
-            'is_read' => false,
-        ]);
+        $this->setProviderApprovalState($provider, ! $provider->approved_at);
 
         if (request()->expectsJson()) {
             return response()->json([
@@ -657,9 +647,72 @@ class DashboardController extends Controller
         return back()->with('success', 'Provider approval status updated.');
     }
 
+    public function providerApprovalLink(Request $request, Provider $provider, string $action): Response
+    {
+        abort_unless($request->hasValidSignature(), 403);
+        abort_unless(in_array($action, ['approve', 'deactivate'], true), 404);
+
+        $approved = $action === 'approve';
+        $this->setProviderApprovalState($provider, $approved);
+        $provider = $provider->fresh('user');
+        $statusLabel = $approved ? 'Provider activated' : 'Provider deactivated';
+        $currentStatus = $approved ? 'Active' : 'Inactive / Pending';
+
+        $html = <<<HTML
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Provider Approval Updated</title>
+    <style>
+        body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #0b0c0f; color: #f5f7fa; }
+        .wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+        .card { width: min(680px, 100%); background: #17191c; border: 1px solid rgba(255,255,255,.08); border-radius: 22px; padding: 28px; box-shadow: 0 24px 60px rgba(0,0,0,.28); }
+        .pill { display: inline-block; padding: 8px 12px; border-radius: 999px; background: rgba(244,180,0,.14); color: #ffd45c; font-weight: 700; margin-bottom: 16px; }
+        .row { margin: 10px 0; color: #c2c8d0; }
+        .row strong { color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="card">
+            <div class="pill">{$statusLabel}</div>
+            <h1 style="margin:0 0 12px;">{$provider->user->name}</h1>
+            <p style="margin:0 0 18px;color:#c2c8d0;">Provider status has been updated successfully using the secure email link.</p>
+            <div class="row"><strong>Email:</strong> {$provider->user->email}</div>
+            <div class="row"><strong>Phone:</strong> {$provider->user->phone}</div>
+            <div class="row"><strong>City:</strong> {$provider->user->city}</div>
+            <div class="row"><strong>Service area:</strong> {$provider->service_area}</div>
+            <div class="row"><strong>Current status:</strong> {$currentStatus}</div>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+
+        return response($html);
+    }
+
     protected function ensureAdmin(Request $request): void
     {
         abort_unless($request->user()->isAdmin(), 403);
+    }
+
+    protected function setProviderApprovalState(Provider $provider, bool $approved): void
+    {
+        $provider->update([
+            'approved_at' => $approved ? now() : null,
+        ]);
+
+        MarketplaceNotification::create([
+            'user_id' => $provider->user_id,
+            'title' => $approved ? 'Profile approved' : 'Approval pending',
+            'message' => $approved ? 'Your provider profile is now live for customers.' : 'Your provider profile was moved back to pending review.',
+            'type' => $approved ? 'success' : 'warning',
+            'action_url' => '/dashboard',
+            'is_read' => false,
+        ]);
     }
 
     protected function validateGuide(Request $request, bool $isUpdate = false): array
