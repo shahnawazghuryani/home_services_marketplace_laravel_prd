@@ -56,23 +56,6 @@
       <main class="page" id="top">
         <div class="container search-layout">
           <section class="section" id="services">
-            <datalist id="locationSuggestions">
-              @for (suggestion of view.location_suggestions; track suggestion) {
-                <option [value]="suggestion"></option>
-              }
-            </datalist>
-            <datalist id="categorySuggestions">
-              @for (item of view.categories; track item.id) {
-                <option [value]="item.name"></option>
-              }
-            </datalist>
-
-            @if (search() || location() || category()) {
-              <div class="section-head compact-head">
-                <button type="button" class="btn secondary" (click)="clearFilters()">{{ t('clearFilters') }}</button>
-              </div>
-            }
-
             <div class="search-shell services-search-shell">
               <div class="search-panel listing-search-panel">
                 <div class="search-panel-top simple">
@@ -88,29 +71,57 @@
                 <div class="hero-search-grid">
                   <label class="search-field">
                     <span class="search-label">{{ t('location') }}</span>
-                    <span class="search-input-wrap search-input-wrap-location">
+                    <span class="search-input-wrap search-input-wrap-location search-input-combobox">
                       <input
                         [ngModel]="location()"
-                        (ngModelChange)="location.set($event)"
-                        list="locationSuggestions"
+                        (ngModelChange)="onLocationInputChange($event)"
+                        (keydown.enter)="submitServiceSearch(); $event.preventDefault()"
+                        (focus)="openLocationMenu()"
+                        (blur)="deferCloseLocationMenu()"
+                        autocomplete="off"
+                        inputmode="search"
                         [placeholder]="t('locationPlaceholder')">
+                      <button type="button" class="search-field-toggle" (mousedown)="$event.preventDefault()" (click)="openLocationMenu()" aria-label="Open location suggestions"></button>
+                      @if (locationMenuOpen() && filteredLocationSuggestions(view.location_suggestions).length) {
+                        <div class="search-suggestion-panel">
+                          @for (suggestion of filteredLocationSuggestions(view.location_suggestions); track suggestion) {
+                            <button type="button" class="search-suggestion-item" (mousedown)="$event.preventDefault()" (click)="selectLocationSuggestion(suggestion)">
+                              {{ suggestion }}
+                            </button>
+                          }
+                        </div>
+                      }
                     </span>
                   </label>
 
                   <label class="search-field">
                     <span class="search-label">{{ t('category') }}</span>
-                    <span class="search-input-wrap search-input-wrap-category">
+                    <span class="search-input-wrap search-input-wrap-category search-input-combobox">
                       <input
                         [ngModel]="categoryInput()"
                         (ngModelChange)="onCategoryInputChange($event, view.categories)"
-                        list="categorySuggestions"
+                        (keydown.enter)="submitServiceSearch(); $event.preventDefault()"
+                        (focus)="openCategoryMenu()"
+                        (blur)="deferCloseCategoryMenu()"
+                        autocomplete="off"
+                        inputmode="search"
                         [placeholder]="t('allCategories')">
+                      <button type="button" class="search-field-toggle" (mousedown)="$event.preventDefault()" (click)="openCategoryMenu()" aria-label="Open category suggestions"></button>
+                      @if (categoryMenuOpen()) {
+                        <div class="search-suggestion-panel">
+                          <button type="button" class="search-suggestion-item search-suggestion-item-clear" (mousedown)="$event.preventDefault()" (click)="clearCategorySelection()">
+                            {{ t('allCategories') }}
+                          </button>
+                          @for (item of filteredCategorySuggestions(view.categories); track item.id) {
+                            <button type="button" class="search-suggestion-item" (mousedown)="$event.preventDefault()" (click)="selectCategorySuggestion(item)">
+                              {{ item.name }}
+                            </button>
+                          }
+                        </div>
+                      }
                     </span>
                   </label>
 
-                  <div class="search-submit">
-                    <button type="button" class="btn brand" (click)="submitServiceSearch()">{{ t('search') }}</button>
-                  </div>
                 </div>
 
               </div>
@@ -256,17 +267,6 @@
           <div class="loading-card card"><h2>Loading services...</h2></div>
         } @else if (servicesPageData(); as list) {
           <section class="section" id="services">
-            <datalist id="servicesLocationSuggestions">
-              @for (suggestion of list.location_suggestions; track suggestion) {
-                <option [value]="suggestion"></option>
-              }
-            </datalist>
-            <datalist id="servicesCategorySuggestions">
-              @for (item of list.categories; track item.id) {
-                <option [value]="item.name"></option>
-              }
-            </datalist>
-
             <div class="search-shell services-search-shell">
               <div class="search-panel listing-search-panel">
                 <div class="search-panel-top simple">
@@ -282,29 +282,57 @@
                 <div class="hero-search-grid">
                   <label class="search-field">
                     <span class="search-label">{{ t('location') }}</span>
-                    <span class="search-input-wrap search-input-wrap-location">
+                    <span class="search-input-wrap search-input-wrap-location search-input-combobox">
                       <input
                         [ngModel]="location()"
-                        (ngModelChange)="location.set($event)"
-                        list="servicesLocationSuggestions"
+                        (ngModelChange)="onLocationInputChange($event)"
+                        (keydown.enter)="submitServiceSearch(); $event.preventDefault()"
+                        (focus)="openLocationMenu()"
+                        (blur)="deferCloseLocationMenu()"
+                        autocomplete="off"
+                        inputmode="search"
                         [placeholder]="t('locationPlaceholder')">
+                      <button type="button" class="search-field-toggle" (mousedown)="$event.preventDefault()" (click)="openLocationMenu()" aria-label="Open location suggestions"></button>
+                      @if (locationMenuOpen() && filteredLocationSuggestions(list.location_suggestions).length) {
+                        <div class="search-suggestion-panel">
+                          @for (suggestion of filteredLocationSuggestions(list.location_suggestions); track suggestion) {
+                            <button type="button" class="search-suggestion-item" (mousedown)="$event.preventDefault()" (click)="selectLocationSuggestion(suggestion)">
+                              {{ suggestion }}
+                            </button>
+                          }
+                        </div>
+                      }
                     </span>
                   </label>
 
                   <label class="search-field">
                     <span class="search-label">{{ t('category') }}</span>
-                    <span class="search-input-wrap search-input-wrap-category">
+                    <span class="search-input-wrap search-input-wrap-category search-input-combobox">
                       <input
                         [ngModel]="categoryInput()"
                         (ngModelChange)="onCategoryInputChange($event, list.categories)"
-                        list="servicesCategorySuggestions"
+                        (keydown.enter)="submitServiceSearch(); $event.preventDefault()"
+                        (focus)="openCategoryMenu()"
+                        (blur)="deferCloseCategoryMenu()"
+                        autocomplete="off"
+                        inputmode="search"
                         [placeholder]="t('allCategories')">
+                      <button type="button" class="search-field-toggle" (mousedown)="$event.preventDefault()" (click)="openCategoryMenu()" aria-label="Open category suggestions"></button>
+                      @if (categoryMenuOpen()) {
+                        <div class="search-suggestion-panel">
+                          <button type="button" class="search-suggestion-item search-suggestion-item-clear" (mousedown)="$event.preventDefault()" (click)="clearCategorySelection()">
+                            {{ t('allCategories') }}
+                          </button>
+                          @for (item of filteredCategorySuggestions(list.categories); track item.id) {
+                            <button type="button" class="search-suggestion-item" (mousedown)="$event.preventDefault()" (click)="selectCategorySuggestion(item)">
+                              {{ item.name }}
+                            </button>
+                          }
+                        </div>
+                      }
                     </span>
                   </label>
 
-                  <div class="search-submit">
-                    <button type="button" class="btn brand" (click)="submitServiceSearch()">{{ t('search') }}</button>
-                  </div>
                 </div>
 
               </div>
@@ -316,7 +344,6 @@
                 <h2 style="margin:0 0 8px;">Services for users</h2>
                 <div class="search-summary">{{ list.summary.results }} result(s) found</div>
               </div>
-              <button class="btn secondary" type="button" (click)="clearFilters()">Clear filters</button>
             </div>
 
             <div class="grid grid-3">

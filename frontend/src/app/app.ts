@@ -490,6 +490,8 @@ export class App {
   readonly location = signal('');
   readonly category = signal('');
   readonly categoryInput = signal('');
+  readonly locationMenuOpen = signal(false);
+  readonly categoryMenuOpen = signal(false);
   readonly locale = signal<LocaleKey>('en');
   readonly currentLocationText = signal(COPY.en['allowLocation']);
   readonly currentPath = signal(this.readPath());
@@ -953,8 +955,14 @@ export class App {
     this.load();
   }
 
+  onLocationInputChange(value: string): void {
+    this.location.set(value);
+    this.locationMenuOpen.set(true);
+  }
+
   onCategoryInputChange(value: string, categories: Array<{ id: number; name: string; slug: string }>): void {
     this.categoryInput.set(value);
+    this.categoryMenuOpen.set(true);
 
     const normalized = value.trim().toLowerCase();
     if (!normalized) {
@@ -967,6 +975,66 @@ export class App {
     );
 
     this.category.set(matched?.slug ?? this.slugify(value));
+  }
+
+  openLocationMenu(): void {
+    this.locationMenuOpen.set(true);
+  }
+
+  openCategoryMenu(): void {
+    this.categoryMenuOpen.set(true);
+  }
+
+  closeLocationMenu(): void {
+    this.locationMenuOpen.set(false);
+  }
+
+  closeCategoryMenu(): void {
+    this.categoryMenuOpen.set(false);
+  }
+
+  deferCloseLocationMenu(): void {
+    window.setTimeout(() => this.locationMenuOpen.set(false), 120);
+  }
+
+  deferCloseCategoryMenu(): void {
+    window.setTimeout(() => this.categoryMenuOpen.set(false), 120);
+  }
+
+  filteredLocationSuggestions(suggestions: string[]): string[] {
+    const term = this.location().trim().toLowerCase();
+
+    return suggestions
+      .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
+      .slice(0, 8);
+  }
+
+  filteredCategorySuggestions(categories: Array<{ id: number; name: string; slug: string }>): Array<{ id: number; name: string; slug: string }> {
+    const term = this.categoryInput().trim().toLowerCase();
+
+    return categories
+      .filter((item) => !term || item.name.toLowerCase().includes(term) || item.slug.toLowerCase().includes(term))
+      .slice(0, 8);
+  }
+
+  selectLocationSuggestion(suggestion: string): void {
+    this.location.set(suggestion);
+    this.locationMenuOpen.set(false);
+    this.submitServiceSearch();
+  }
+
+  selectCategorySuggestion(category: { id: number; name: string; slug: string }): void {
+    this.category.set(category.slug);
+    this.categoryInput.set(category.name);
+    this.categoryMenuOpen.set(false);
+    this.submitServiceSearch();
+  }
+
+  clearCategorySelection(): void {
+    this.category.set('');
+    this.categoryInput.set('');
+    this.categoryMenuOpen.set(false);
+    this.submitServiceSearch();
   }
 
   applyQuickSearch(search: string, category = '', location = ''): void {
