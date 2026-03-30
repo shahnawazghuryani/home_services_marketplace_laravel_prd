@@ -886,9 +886,18 @@
             @if (dash.role === 'provider') {
               <section class="card dashboard-block">
                 <h3>Provider actions</h3>
+                @if (!dash.profile?.approved) {
+                  <div class="notice">
+                    آپ کی پروفائل بن گئی ہے۔ ایڈمن 24 گھنٹے کے اندر، یا اس سے پہلے، آپ کو کنفرمیشن ای میل یا واٹس ایپ پر بھیج دے گا۔ منظوری کے بعد ہی آپ سروس شامل کر سکتے ہیں۔
+                  </div>
+                }
                 <div class="stack-actions">
                   <a class="btn secondary" [href]="dash.actions?.edit_profile_url || '#'">Edit profile</a>
-                  <a class="btn brand" [href]="dash.actions?.add_service_url || '#'">Add new service</a>
+                  @if (dash.profile?.approved) {
+                    <a class="btn brand" [href]="dash.actions?.add_service_url || '#'">Add new service</a>
+                  } @else {
+                    <span class="btn secondary" style="opacity:.65; pointer-events:none;">Admin approval required</span>
+                  }
                 </div>
                 <div class="grid grid-2" style="margin-top:18px;">
                   @for (service of dash.services ?? []; track service['id']) {
@@ -1199,6 +1208,9 @@
                 @if (registerForm.role === 'provider') {
                   <div class="form-section auth-section">
                     <div class="form-section-title">Professional profile</div>
+                    <div class="notice">
+                      آپ کی پروفائل بن جائے گی۔ ایڈمن 24 گھنٹے کے اندر، یا اس سے پہلے، آپ کو کنفرمیشن ای میل یا واٹس ایپ پر بھیج دے گا۔ منظوری کے بعد ہی آپ سروس شامل کر سکتے ہیں۔
+                    </div>
                     <div class="grid grid-2">
                       <label>Service area<input type="text" name="service_area" [(ngModel)]="registerForm.service_area" placeholder="DHA, Gulshan, Clifton"></label>
                       <label>Experience years<input type="number" name="experience_years" [(ngModel)]="registerForm.experience_years"></label>
