@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\MediaController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProviderController;
 use App\Http\Controllers\ServiceController;
@@ -42,6 +43,7 @@ Route::get('/contact', [PageController::class, 'contact'])->name('contact');
 Route::get('/privacy-policy', [PageController::class, 'privacy'])->name('privacy');
 Route::get('/terms-and-conditions', [PageController::class, 'terms'])->name('terms');
 Route::get('/provider-onboarding', [PageController::class, 'providerOnboarding'])->name('provider-onboarding');
+Route::get('/media/{path}', [MediaController::class, 'show'])->where('path', '.*')->name('media.show');
 
 Route::get('/spa/{any?}', function (?string $any = null) {
     $target = '/' . ltrim((string) $any, '/');

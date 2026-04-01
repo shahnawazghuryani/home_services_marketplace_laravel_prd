@@ -296,11 +296,12 @@ class LandingController extends Controller
             return null;
         }
 
-        $normalizedPath = ltrim($path, '/');
-        if (! file_exists(public_path($normalizedPath))) {
-            return null;
-        }
+        $normalizedPath = trim((string) $path, '/');
 
-        return '/' . $normalizedPath;
+        return $normalizedPath === ''
+            ? null
+            : '/media/' . implode('/', array_map('rawurlencode', explode('/', $normalizedPath)));
     }
 }
+
+
