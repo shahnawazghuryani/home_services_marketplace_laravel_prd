@@ -663,6 +663,7 @@ export class App {
   readonly categoryMenuOpen = signal(false);
   readonly serviceCategoryMenuOpen = signal(false);
   readonly serviceCategorySearch = signal('');
+  private serviceCategoryCloseTimer: ReturnType<typeof window.setTimeout> | null = null;
   readonly locale = signal<LocaleKey>('en');
   readonly currentLocationText = signal(COPY.ur['allowLocation']);
   readonly currentPath = signal(this.readPath());
@@ -1210,15 +1211,32 @@ export class App {
   }
 
   openServiceCategoryMenu(): void {
+    if (this.serviceCategoryCloseTimer !== null) {
+      window.clearTimeout(this.serviceCategoryCloseTimer);
+      this.serviceCategoryCloseTimer = null;
+    }
+
     this.serviceCategoryMenuOpen.set(true);
   }
 
   closeServiceCategoryMenu(): void {
+    if (this.serviceCategoryCloseTimer !== null) {
+      window.clearTimeout(this.serviceCategoryCloseTimer);
+      this.serviceCategoryCloseTimer = null;
+    }
+
     this.serviceCategoryMenuOpen.set(false);
   }
 
   deferCloseServiceCategoryMenu(): void {
-    window.setTimeout(() => this.serviceCategoryMenuOpen.set(false), 120);
+    if (this.serviceCategoryCloseTimer !== null) {
+      window.clearTimeout(this.serviceCategoryCloseTimer);
+    }
+
+    this.serviceCategoryCloseTimer = window.setTimeout(() => {
+      this.serviceCategoryMenuOpen.set(false);
+      this.serviceCategoryCloseTimer = null;
+    }, 120);
   }
 
   filteredServiceFormCategories(): Array<{ id: number; name: string }> {
