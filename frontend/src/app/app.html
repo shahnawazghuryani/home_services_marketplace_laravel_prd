@@ -1198,7 +1198,7 @@
                   </label>
                   <label>Duration minutes<input type="number" name="duration_minutes" [(ngModel)]="serviceForm.duration_minutes"></label>
                   @if (!isAdminServiceEditPage()) {
-                    <label>Service image<input type="file" name="image" accept="image/*" (change)="onServiceFileChange($event)"></label>
+                    <label>Service image<input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" (change)="onServiceFileChange($event)"></label>
                   }
                   <label class="checkbox-row">
                     <input type="checkbox" name="is_active" [(ngModel)]="serviceForm.is_active">
@@ -1354,4 +1354,3 @@
     </div>
   </div>
 </ng-template>
-

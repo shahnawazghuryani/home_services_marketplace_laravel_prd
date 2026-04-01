@@ -1963,7 +1963,8 @@ export class App {
         next: (response) => window.location.href = response.redirect,
         error: (error) => {
           this.authLoading.set(false);
-          this.authError.set(error?.error?.message ?? 'Service save failed.');
+          const imageError = error?.error?.errors?.image?.[0];
+          this.authError.set(imageError ?? error?.error?.message ?? 'Service save failed.');
         }
       });
   }

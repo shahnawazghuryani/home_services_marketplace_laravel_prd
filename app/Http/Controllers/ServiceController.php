@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ServiceController extends Controller
 {
@@ -265,6 +266,12 @@ class ServiceController extends Controller
 
     protected function validateService(Request $request): array
     {
+        if ($request->hasFile('image') && ! $request->file('image')->isValid()) {
+            throw ValidationException::withMessages([
+                'image' => 'Image upload failed: ' . $request->file('image')->getErrorMessage(),
+            ]);
+        }
+
         $validated = $request->validate([
             'category_id' => ['nullable', 'exists:categories,id'],
             'category_ids' => ['nullable', 'array', 'min:1'],
@@ -275,7 +282,7 @@ class ServiceController extends Controller
             'price' => ['nullable', 'numeric', 'min:0'],
             'price_type' => ['nullable', Rule::in(['fixed', 'hourly'])],
             'duration_minutes' => ['nullable', 'integer', 'min:0'],
-            'image' => ['nullable', 'image', 'max:4096'],
+            'image' => ['nullable', 'image', 'max:10240'],
             'generated_image_svg' => ['nullable', 'string', 'max:30000'],
             'is_active' => ['nullable', 'boolean'],
         ]);
@@ -418,10 +425,6 @@ class ServiceController extends Controller
                 ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
                 ->whereNotNull('city')
                 ->pluck('city'))
-            ->merge(User::query()
-                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
-                ->whereNotNull('address')
-                ->pluck('address'))
             ->map(fn ($value) => trim((string) $value))
             ->filter()
             ->unique()
