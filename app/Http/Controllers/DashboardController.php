@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -159,12 +160,16 @@ class DashboardController extends Controller
                     return [
                         'id' => $provider->id,
                         'name' => $provider->user->name,
+                        'email' => $provider->user->email,
+                        'login_username' => $provider->user->email,
+                        'login_password_note' => 'Password is encrypted and cannot be displayed.',
                         'service_area' => $provider->service_area,
                         'approved' => (bool) $provider->approved_at,
                         'total_views' => (int) $visitSummary['total_views'],
                         'today_views' => (int) $visitSummary['today_views'],
                         'recent_reviews' => $recentReviews,
                         'approval_url' => route('admin.providers.approve', $provider),
+                        'impersonate_url' => route('admin.providers.impersonate', $provider),
                     ];
                 }),
                 'adminCategories' => Category::latest()->get()->map(fn ($category) => [
@@ -645,6 +650,23 @@ class DashboardController extends Controller
         }
 
         return back()->with('success', 'Provider approval status updated.');
+    }
+
+    public function impersonateProvider(Request $request, Provider $provider): RedirectResponse|JsonResponse
+    {
+        $this->ensureAdmin($request);
+
+        Auth::loginUsingId($provider->user_id);
+        $request->session()->regenerate();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Logged in as provider successfully.',
+                'redirect' => route('dashboard'),
+            ]);
+        }
+
+        return redirect()->route('dashboard')->with('success', 'Logged in as provider successfully.');
     }
 
     public function providerApprovalLink(Request $request, Provider $provider, string $action): Response

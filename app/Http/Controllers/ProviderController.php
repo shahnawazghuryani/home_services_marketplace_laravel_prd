@@ -9,6 +9,7 @@ class ProviderController extends Controller
     public function show(int $provider)
     {
         $provider = Provider::with(['user', 'services.category', 'reviews.customer'])
+            ->whereNotNull('approved_at')
             ->findOrFail($provider);
 
         $locationLabel = collect([

@@ -143,6 +143,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::post('/providers/{provider}/approve', [DashboardController::class, 'approveProvider'])->name('providers.approve');
+        Route::post('/providers/{provider}/impersonate', [DashboardController::class, 'impersonateProvider'])->name('providers.impersonate');
         Route::post('/categories', [DashboardController::class, 'storeCategory'])->name('categories.store');
         Route::put('/categories/{category}', [DashboardController::class, 'updateCategory'])->name('categories.update');
         Route::delete('/categories/{category}', [DashboardController::class, 'destroyCategory'])->name('categories.destroy');

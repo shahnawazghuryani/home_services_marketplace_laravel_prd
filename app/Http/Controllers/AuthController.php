@@ -121,7 +121,7 @@ class AuthController extends Controller
                 'hourly_rate' => $data['hourly_rate'] ?? 0,
                 'service_area' => $data['service_area'] ?? $data['city'],
                 'availability' => $data['availability'] ?? 'Mon-Sat, 10 AM - 7 PM',
-                'approved_at' => null,
+                'approved_at' => now(),
                 'is_featured' => false,
             ]);
 

@@ -21,7 +21,9 @@ class ServiceController extends Controller
 
     public function index(Request $request)
     {
-        $query = Service::with(['category', 'categories', 'provider.user'])->where('is_active', true);
+        $query = Service::with(['category', 'categories', 'provider.user'])
+            ->where('is_active', true)
+            ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'));
 
         if ($request->filled('category')) {
             $query->whereHas('categories', fn ($categoryQuery) => $categoryQuery->where('slug', $request->input('category')));
@@ -64,6 +66,7 @@ class ServiceController extends Controller
     public function show(string $slug)
     {
         $service = Service::with(['category', 'categories', 'provider.user', 'bookings.reviews'])
+            ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -74,6 +77,7 @@ class ServiceController extends Controller
 
         $relatedServices = Service::with(['category', 'categories', 'provider.user'])
             ->whereHas('categories', fn ($categoryQuery) => $categoryQuery->whereIn('categories.id', $relatedCategoryIds))
+            ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
             ->where('id', '!=', $service->id)
             ->take(3)
             ->get();
@@ -409,9 +413,15 @@ class ServiceController extends Controller
     protected function locationSuggestions(): array
     {
         return collect()
-            ->merge(User::query()->whereNotNull('city')->pluck('city'))
-            ->merge(User::query()->whereNotNull('address')->pluck('address'))
-            ->merge(Provider::query()->whereNotNull('service_area')->pluck('service_area'))
+            ->merge(Provider::query()->whereNotNull('approved_at')->whereNotNull('service_area')->pluck('service_area'))
+            ->merge(User::query()
+                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
+                ->whereNotNull('city')
+                ->pluck('city'))
+            ->merge(User::query()
+                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
+                ->whereNotNull('address')
+                ->pluck('address'))
             ->map(fn ($value) => trim((string) $value))
             ->filter()
             ->unique()

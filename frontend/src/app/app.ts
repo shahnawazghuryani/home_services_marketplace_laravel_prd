@@ -128,6 +128,9 @@ interface DashboardData {
   providers?: Array<{
     id: number;
     name: string;
+    email?: string;
+    login_username?: string;
+    login_password_note?: string;
     service_area: string;
     approved: boolean;
     total_views?: number;
@@ -138,6 +141,7 @@ interface DashboardData {
       customer_name: string;
     }>;
     approval_url?: string;
+    impersonate_url?: string;
   }>;
   adminCategories?: Array<{
     id: number;
@@ -1671,6 +1675,25 @@ export class App {
       });
   }
 
+  loginAsProvider(url: string, providerId: number): void {
+    this.dashboardActionLoading = `impersonate-${providerId}`;
+    this.authError.set('');
+
+    this.http.post<AuthResponse>(url, {}, {
+      headers: this.authHeaders(),
+    }).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response) => {
+          this.dashboardActionLoading = '';
+          window.location.href = response.redirect || this.backendUrl('/dashboard');
+        },
+        error: (error) => {
+          this.dashboardActionLoading = '';
+          this.authError.set(error?.error?.message ?? 'Provider login failed.');
+        }
+      });
+  }
+
   updateBookingStatus(url: string, bookingId: number): void {
     this.dashboardActionLoading = `booking-${bookingId}`;
     this.authError.set('');
@@ -2329,4 +2352,3 @@ export class App {
     return this.backendUrl(path.replace('/edit', ''));
   }
 }
-

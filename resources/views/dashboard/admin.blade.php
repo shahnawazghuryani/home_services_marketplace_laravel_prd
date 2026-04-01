@@ -136,11 +136,19 @@
                         <div>
                             <strong>{{ $provider->user->name }}</strong>
                             <div class="muted">{{ $provider->service_area }} - {{ $provider->approved_at ? 'Approved' : 'Pending approval' }}</div>
+                            <div class="muted">Login username: {{ $provider->user->email }}</div>
+                            <div class="muted">Password: Encrypted (plain password cannot be shown)</div>
                         </div>
-                        <form method="POST" action="{{ route('admin.providers.approve', $provider) }}">
-                            @csrf
-                            <button class="btn {{ $provider->approved_at ? 'warning' : 'success' }}" type="submit">{{ $provider->approved_at ? 'Set pending' : 'Approve' }}</button>
-                        </form>
+                        <div class="stack-actions">
+                            <form method="POST" action="{{ route('admin.providers.approve', $provider) }}">
+                                @csrf
+                                <button class="btn {{ $provider->approved_at ? 'warning' : 'success' }}" type="submit">{{ $provider->approved_at ? 'Set pending' : 'Approve' }}</button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.providers.impersonate', $provider) }}">
+                                @csrf
+                                <button class="btn brand" type="submit">Login as provider</button>
+                            </form>
+                        </div>
                     </div>
                 @endforeach
             </div>

@@ -844,6 +844,8 @@
                           - {{ provider.total_views ?? 0 }} total views
                           - {{ provider.today_views ?? 0 }} today
                         </div>
+                        <div class="muted">Login username: {{ provider.login_username || provider.email || 'N/A' }}</div>
+                        <div class="muted">Password: {{ provider.login_password_note || 'Password is encrypted and cannot be displayed.' }}</div>
                         @if ((provider.recent_reviews ?? []).length > 0) {
                           <div class="review-list compact-review-list">
                             @for (review of provider.recent_reviews ?? []; track review.customer_name + review.comment) {
@@ -858,7 +860,10 @@
                           </div>
                         }
                       </div>
-                      <button class="btn secondary" type="button" (click)="toggleProviderApproval(provider.approval_url || '', provider.id)" [disabled]="dashboardActionKey('provider-' + provider.id)">{{ provider.approved ? 'Set pending' : 'Approve' }}</button>
+                      <div class="stack-actions">
+                        <button class="btn secondary" type="button" (click)="toggleProviderApproval(provider.approval_url || '', provider.id)" [disabled]="dashboardActionKey('provider-' + provider.id)">{{ provider.approved ? 'Set pending' : 'Approve' }}</button>
+                        <button class="btn brand" type="button" (click)="loginAsProvider(provider.impersonate_url || '', provider.id)" [disabled]="dashboardActionKey('impersonate-' + provider.id)">Login as provider</button>
+                      </div>
                     </div>
                   }
                 </div>
@@ -1349,5 +1354,4 @@
     </div>
   </div>
 </ng-template>
-
 

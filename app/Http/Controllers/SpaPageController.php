@@ -14,7 +14,9 @@ class SpaPageController extends Controller
 {
     public function servicesIndex(Request $request): JsonResponse
     {
-        $query = Service::with(['category', 'categories', 'provider.user'])->where('is_active', true);
+        $query = Service::with(['category', 'categories', 'provider.user'])
+            ->where('is_active', true)
+            ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'));
 
         if ($request->filled('category')) {
             $query->whereHas('categories', fn ($categoryQuery) => $categoryQuery->where('slug', $request->input('category')));
@@ -88,6 +90,7 @@ class SpaPageController extends Controller
     public function serviceShow(Request $request, string $slug): JsonResponse
     {
         $service = Service::with(['category', 'categories', 'provider.user', 'bookings.reviews'])
+            ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
             ->where('slug', $slug)
             ->firstOrFail();
 
@@ -98,6 +101,7 @@ class SpaPageController extends Controller
 
         $relatedServices = Service::with(['category', 'categories', 'provider.user'])
             ->whereHas('categories', fn ($categoryQuery) => $categoryQuery->whereIn('categories.id', $relatedCategoryIds))
+            ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
             ->where('id', '!=', $service->id)
             ->take(3)
             ->get();
@@ -146,6 +150,7 @@ class SpaPageController extends Controller
     public function providerShow(int $provider): JsonResponse
     {
         $provider = Provider::with(['user', 'services.category', 'services.categories', 'reviews.customer'])
+            ->whereNotNull('approved_at')
             ->findOrFail($provider);
 
         $locationLabel = collect([
@@ -193,7 +198,11 @@ class SpaPageController extends Controller
 
     public function bookingCreate(Request $request, string $slug): JsonResponse
     {
-        $service = Service::with(['category', 'categories', 'provider.user'])->where('slug', $slug)->firstOrFail();
+        $service = Service::with(['category', 'categories', 'provider.user'])
+            ->where('is_active', true)
+            ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
+            ->where('slug', $slug)
+            ->firstOrFail();
 
         abort_unless($request->user()?->isCustomer(), 403);
 
@@ -239,9 +248,15 @@ class SpaPageController extends Controller
     protected function locationSuggestions(): array
     {
         return collect()
-            ->merge(User::query()->whereNotNull('city')->pluck('city'))
-            ->merge(User::query()->whereNotNull('address')->pluck('address'))
-            ->merge(Provider::query()->whereNotNull('service_area')->pluck('service_area'))
+            ->merge(Provider::query()->whereNotNull('approved_at')->whereNotNull('service_area')->pluck('service_area'))
+            ->merge(User::query()
+                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
+                ->whereNotNull('city')
+                ->pluck('city'))
+            ->merge(User::query()
+                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
+                ->whereNotNull('address')
+                ->pluck('address'))
             ->map(fn ($value) => trim((string) $value))
             ->filter()
             ->unique()
