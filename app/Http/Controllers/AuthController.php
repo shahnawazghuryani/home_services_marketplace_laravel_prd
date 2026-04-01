@@ -85,8 +85,9 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:50'],
             'role' => ['required', Rule::in(['customer', 'provider'])],
-            'city' => ['required', 'string', 'max:120'],
-            'address' => ['required', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:120'],
+            'address' => ['nullable', 'string', 'max:255'],
             'password' => ['required', 'confirmed', 'min:6'],
             'bio' => ['nullable', 'string'],
             'experience_years' => ['nullable', 'integer', 'min:0'],
@@ -95,6 +96,13 @@ class AuthController extends Controller
             'availability' => ['nullable', 'string', 'max:255'],
             'redirect_to' => ['nullable', 'string', 'max:500'],
         ]);
+
+        $normalizedLocation = trim((string) ($data['location'] ?? $data['address'] ?? $data['city'] ?? ''));
+
+        abort_if($normalizedLocation === '', 422, 'Location is required.');
+
+        $data['city'] = $normalizedLocation;
+        $data['address'] = $normalizedLocation;
 
         if (($data['role'] ?? null) === 'provider') {
             $this->contentSafety->ensureCleanText([

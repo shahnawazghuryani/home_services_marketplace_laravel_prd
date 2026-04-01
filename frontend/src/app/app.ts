@@ -670,12 +670,24 @@ export class App {
   readonly locationMenuOpen = signal(false);
   readonly locationRemoteSuggestions = signal<string[]>([]);
   readonly locationSuggestionsLoading = signal(false);
+  readonly registerLocationInput = signal('');
+  readonly registerLocationMenuOpen = signal(false);
+  readonly registerLocationRemoteSuggestions = signal<string[]>([]);
+  readonly registerLocationSuggestionsLoading = signal(false);
+  readonly providerLocationInput = signal('');
+  readonly providerLocationMenuOpen = signal(false);
+  readonly providerLocationRemoteSuggestions = signal<string[]>([]);
+  readonly providerLocationSuggestionsLoading = signal(false);
   readonly categoryMenuOpen = signal(false);
   readonly serviceCategoryMenuOpen = signal(false);
   readonly serviceCategorySearch = signal('');
   private serviceCategoryCloseTimer: ReturnType<typeof window.setTimeout> | null = null;
   private locationSuggestionTimer: ReturnType<typeof window.setTimeout> | null = null;
   private locationSuggestionAbort: AbortController | null = null;
+  private registerLocationSuggestionTimer: ReturnType<typeof window.setTimeout> | null = null;
+  private registerLocationSuggestionAbort: AbortController | null = null;
+  private providerLocationSuggestionTimer: ReturnType<typeof window.setTimeout> | null = null;
+  private providerLocationSuggestionAbort: AbortController | null = null;
   readonly locale = signal<LocaleKey>('en');
   readonly currentLocationText = signal(COPY.ur['allowLocation']);
   readonly currentPath = signal(this.readPath());
@@ -1195,12 +1207,88 @@ export class App {
     return this.locationSuggestionOptions(suggestions).map((item) => item.label);
   }
 
+  providerProfileLocationSuggestions(): string[] {
+    return Array.from(
+      new Set(
+        [
+          this.providerProfileForm.city,
+          this.providerProfileForm.address,
+          this.providerProfileForm.service_area,
+        ]
+          .map((item) => item.trim())
+          .filter(Boolean)
+      )
+    );
+  }
+
+  registerLocationSuggestions(): string[] {
+    return Array.from(
+      new Set(
+        [
+          this.registerForm.city,
+          this.registerForm.address,
+          this.registerForm.service_area,
+          this.providerProfileForm.city,
+          this.providerProfileForm.address,
+        ]
+          .map((item) => item.trim())
+          .filter(Boolean)
+      )
+    );
+  }
+
   locationSuggestionOptions(suggestions: string[]): MapLocationSuggestion[] {
     const term = this.location().trim().toLowerCase();
     const local = suggestions
       .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
       .map((suggestion) => ({ label: suggestion, source: 'saved' as const }));
     const remote = this.locationRemoteSuggestions()
+      .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
+      .map((suggestion) => ({ label: suggestion, source: 'map' as const }));
+    const seen = new Set<string>();
+
+    return [...local, ...remote]
+      .filter((item) => {
+        const key = item.label.trim().toLowerCase();
+        if (!key || seen.has(key)) {
+          return false;
+        }
+
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 8);
+  }
+
+  providerLocationSuggestionOptions(suggestions: string[]): MapLocationSuggestion[] {
+    const term = this.providerLocationInput().trim().toLowerCase();
+    const local = suggestions
+      .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
+      .map((suggestion) => ({ label: suggestion, source: 'saved' as const }));
+    const remote = this.providerLocationRemoteSuggestions()
+      .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
+      .map((suggestion) => ({ label: suggestion, source: 'map' as const }));
+    const seen = new Set<string>();
+
+    return [...local, ...remote]
+      .filter((item) => {
+        const key = item.label.trim().toLowerCase();
+        if (!key || seen.has(key)) {
+          return false;
+        }
+
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 8);
+  }
+
+  registerLocationSuggestionOptions(suggestions: string[]): MapLocationSuggestion[] {
+    const term = this.registerLocationInput().trim().toLowerCase();
+    const local = suggestions
+      .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
+      .map((suggestion) => ({ label: suggestion, source: 'saved' as const }));
+    const remote = this.registerLocationRemoteSuggestions()
       .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
       .map((suggestion) => ({ label: suggestion, source: 'map' as const }));
     const seen = new Set<string>();
@@ -1231,6 +1319,60 @@ export class App {
     this.locationRemoteSuggestions.set([]);
     this.locationMenuOpen.set(false);
     this.submitServiceSearch();
+  }
+
+  onRegisterLocationInput(value: string): void {
+    this.registerLocationInput.set(value);
+    this.registerLocationMenuOpen.set(true);
+    this.scheduleRegisterRemoteLocationSuggestions(value);
+  }
+
+  openRegisterLocationMenu(): void {
+    this.registerLocationMenuOpen.set(true);
+    this.scheduleRegisterRemoteLocationSuggestions(this.registerLocationInput());
+  }
+
+  closeRegisterLocationMenu(): void {
+    this.registerLocationMenuOpen.set(false);
+  }
+
+  deferCloseRegisterLocationMenu(): void {
+    window.setTimeout(() => this.registerLocationMenuOpen.set(false), 120);
+  }
+
+  selectRegisterLocationSuggestion(suggestion: string): void {
+    this.registerLocationInput.set(suggestion);
+    this.registerLocationRemoteSuggestions.set([]);
+    this.registerLocationMenuOpen.set(false);
+    this.registerForm.city = suggestion;
+    this.registerForm.address = suggestion;
+  }
+
+  onProviderLocationInput(value: string): void {
+    this.providerLocationInput.set(value);
+    this.providerLocationMenuOpen.set(true);
+    this.scheduleProviderRemoteLocationSuggestions(value);
+  }
+
+  openProviderLocationMenu(): void {
+    this.providerLocationMenuOpen.set(true);
+    this.scheduleProviderRemoteLocationSuggestions(this.providerLocationInput());
+  }
+
+  closeProviderLocationMenu(): void {
+    this.providerLocationMenuOpen.set(false);
+  }
+
+  deferCloseProviderLocationMenu(): void {
+    window.setTimeout(() => this.providerLocationMenuOpen.set(false), 120);
+  }
+
+  selectProviderLocationSuggestion(suggestion: string): void {
+    this.providerLocationInput.set(suggestion);
+    this.providerLocationRemoteSuggestions.set([]);
+    this.providerLocationMenuOpen.set(false);
+    this.providerProfileForm.city = suggestion;
+    this.providerProfileForm.address = suggestion;
   }
 
   selectCategorySuggestion(category: { id: number; name: string; slug: string }): void {
@@ -1429,6 +1571,54 @@ export class App {
     }, 260);
   }
 
+  private scheduleRegisterRemoteLocationSuggestions(value: string): void {
+    const query = value.trim();
+
+    if (this.registerLocationSuggestionTimer !== null) {
+      window.clearTimeout(this.registerLocationSuggestionTimer);
+      this.registerLocationSuggestionTimer = null;
+    }
+
+    if (this.registerLocationSuggestionAbort) {
+      this.registerLocationSuggestionAbort.abort();
+      this.registerLocationSuggestionAbort = null;
+    }
+
+    if (query.length < 2) {
+      this.registerLocationRemoteSuggestions.set([]);
+      this.registerLocationSuggestionsLoading.set(false);
+      return;
+    }
+
+    this.registerLocationSuggestionTimer = window.setTimeout(() => {
+      this.fetchRegisterRemoteLocationSuggestions(query);
+    }, 260);
+  }
+
+  private scheduleProviderRemoteLocationSuggestions(value: string): void {
+    const query = value.trim();
+
+    if (this.providerLocationSuggestionTimer !== null) {
+      window.clearTimeout(this.providerLocationSuggestionTimer);
+      this.providerLocationSuggestionTimer = null;
+    }
+
+    if (this.providerLocationSuggestionAbort) {
+      this.providerLocationSuggestionAbort.abort();
+      this.providerLocationSuggestionAbort = null;
+    }
+
+    if (query.length < 2) {
+      this.providerLocationRemoteSuggestions.set([]);
+      this.providerLocationSuggestionsLoading.set(false);
+      return;
+    }
+
+    this.providerLocationSuggestionTimer = window.setTimeout(() => {
+      this.fetchProviderRemoteLocationSuggestions(query);
+    }, 260);
+  }
+
   private fetchRemoteLocationSuggestions(query: string): void {
     if (typeof window === 'undefined') {
       return;
@@ -1464,6 +1654,82 @@ export class App {
       })
       .finally(() => {
         this.locationSuggestionAbort = null;
+      });
+  }
+
+  private fetchRegisterRemoteLocationSuggestions(query: string): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    this.registerLocationSuggestionsLoading.set(true);
+    this.registerLocationSuggestionAbort = new AbortController();
+
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=pk&addressdetails=1&q=${encodeURIComponent(query)}`;
+
+    fetch(url, {
+      signal: this.registerLocationSuggestionAbort.signal,
+      headers: {
+        'Accept': 'application/json',
+      },
+    })
+      .then((response) => response.ok ? response.json() : [])
+      .then((results: Array<{ display_name?: string }>) => {
+        this.registerLocationRemoteSuggestions.set(
+          (results ?? [])
+            .map((item) => this.compactLocationLabel(item.display_name ?? ''))
+            .filter((item) => item.length > 0)
+        );
+        this.registerLocationSuggestionsLoading.set(false);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+
+        this.registerLocationRemoteSuggestions.set([]);
+        this.registerLocationSuggestionsLoading.set(false);
+      })
+      .finally(() => {
+        this.registerLocationSuggestionAbort = null;
+      });
+  }
+
+  private fetchProviderRemoteLocationSuggestions(query: string): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    this.providerLocationSuggestionsLoading.set(true);
+    this.providerLocationSuggestionAbort = new AbortController();
+
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=pk&addressdetails=1&q=${encodeURIComponent(query)}`;
+
+    fetch(url, {
+      signal: this.providerLocationSuggestionAbort.signal,
+      headers: {
+        'Accept': 'application/json',
+      },
+    })
+      .then((response) => response.ok ? response.json() : [])
+      .then((results: Array<{ display_name?: string }>) => {
+        this.providerLocationRemoteSuggestions.set(
+          (results ?? [])
+            .map((item) => this.compactLocationLabel(item.display_name ?? ''))
+            .filter((item) => item.length > 0)
+        );
+        this.providerLocationSuggestionsLoading.set(false);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+
+        this.providerLocationRemoteSuggestions.set([]);
+        this.providerLocationSuggestionsLoading.set(false);
+      })
+      .finally(() => {
+        this.providerLocationSuggestionAbort = null;
       });
   }
 
@@ -1596,6 +1862,10 @@ export class App {
   submitRegister(): void {
     this.authLoading.set(true);
     this.authError.set('');
+
+    const normalizedLocation = this.registerLocationInput().trim();
+    this.registerForm.city = normalizedLocation;
+    this.registerForm.address = normalizedLocation;
 
     this.http.post<AuthResponse>(this.backendUrl('/register'), this.registerForm, {
       headers: this.authHeaders()
@@ -1928,6 +2198,10 @@ export class App {
   submitProviderProfile(): void {
     this.authLoading.set(true);
     this.authError.set('');
+
+    const normalizedLocation = this.providerLocationInput().trim();
+    this.providerProfileForm.city = normalizedLocation;
+    this.providerProfileForm.address = normalizedLocation;
 
     this.http.put<AuthResponse>(this.backendUrl('/provider/profile'), this.providerProfileForm, {
       headers: this.authHeaders(),
@@ -2355,6 +2629,7 @@ export class App {
             service_area: response.profile.service_area,
             availability: response.profile.availability,
           };
+          this.providerLocationInput.set(response.user.address || response.user.city || '');
           this.pageLoading.set(false);
         },
         error: () => {

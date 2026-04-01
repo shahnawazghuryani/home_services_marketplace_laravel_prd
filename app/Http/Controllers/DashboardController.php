@@ -351,14 +351,20 @@ class DashboardController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:50'],
-            'city' => ['required', 'string', 'max:120'],
-            'address' => ['required', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:120'],
+            'address' => ['nullable', 'string', 'max:255'],
             'bio' => ['required', 'string', 'max:2000'],
             'experience_years' => ['required', 'integer', 'min:0'],
             'hourly_rate' => ['required', 'numeric', 'min:0'],
             'service_area' => ['required', 'string', 'max:255'],
             'availability' => ['required', 'string', 'max:255'],
         ]);
+
+        $normalizedLocation = trim((string) ($data['location'] ?? $data['address'] ?? $data['city'] ?? ''));
+        abort_if($normalizedLocation === '', 422, 'Location is required.');
+        $data['city'] = $normalizedLocation;
+        $data['address'] = $normalizedLocation;
 
         $this->contentSafety->ensureCleanText([
             'bio' => $data['bio'],

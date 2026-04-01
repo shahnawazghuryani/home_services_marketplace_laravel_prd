@@ -1059,8 +1059,35 @@
                 <div class="grid grid-2">
                   <label>{{ t('fullName') }}<input type="text" name="name" [(ngModel)]="providerProfileForm.name" required></label>
                   <label>{{ t('phone') }}<input type="text" name="phone" [(ngModel)]="providerProfileForm.phone" required></label>
-                  <label>{{ t('city') }}<input type="text" name="city" [(ngModel)]="providerProfileForm.city" required></label>
-                  <label>{{ t('address') }}<input type="text" name="address" [(ngModel)]="providerProfileForm.address" required></label>
+                  <label class="full-span">
+                    {{ t('location') }}
+                    <div class="search-input-wrap">
+                      <input
+                        type="text"
+                        name="provider_location"
+                        [ngModel]="providerLocationInput()"
+                        (ngModelChange)="onProviderLocationInput($event)"
+                        (focus)="openProviderLocationMenu()"
+                        (blur)="deferCloseProviderLocationMenu()"
+                        [placeholder]="t('locationPlaceholder')"
+                        autocomplete="off"
+                        required>
+                      <button type="button" class="search-field-toggle" (mousedown)="$event.preventDefault()" (click)="openProviderLocationMenu()" aria-label="Open location suggestions"></button>
+                      @if (providerLocationMenuOpen() && (providerLocationSuggestionOptions(providerProfileLocationSuggestions()).length || providerLocationSuggestionsLoading())) {
+                        <div class="search-suggestion-panel">
+                          @if (providerLocationSuggestionsLoading()) {
+                            <div class="search-suggestion-meta">Searching map suggestions...</div>
+                          }
+                          @for (suggestion of providerLocationSuggestionOptions(providerProfileLocationSuggestions()); track suggestion.label) {
+                            <button type="button" class="search-suggestion-item" (mousedown)="$event.preventDefault()" (click)="selectProviderLocationSuggestion(suggestion.label)">
+                              <span>{{ suggestion.label }}</span>
+                              <small class="search-suggestion-tag">{{ suggestion.source === 'map' ? 'Map' : 'Saved' }}</small>
+                            </button>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </label>
                   <label>{{ t('experienceYears') }}<input type="number" name="experience_years" [(ngModel)]="providerProfileForm.experience_years" required></label>
                   <label>{{ t('hourlyRate') }}<input type="number" name="hourly_rate" [(ngModel)]="providerProfileForm.hourly_rate" required></label>
                   <label>{{ t('serviceAreaField') }}<input type="text" name="service_area" [(ngModel)]="providerProfileForm.service_area" required></label>
@@ -1273,8 +1300,35 @@
                   <label>Email<input type="email" name="email" [(ngModel)]="registerForm.email" placeholder="Enter email" required></label>
                   <label>Phone<input type="text" name="phone" [(ngModel)]="registerForm.phone" placeholder="03xx-xxxxxxx" required></label>
                   <label>{{ t('role') }}<select name="role" [(ngModel)]="registerForm.role"><option value="customer">{{ t('customer') }}</option><option value="provider">{{ t('serviceProvider') }}</option></select></label>
-                  <label>City<input type="text" name="city" [(ngModel)]="registerForm.city" placeholder="Karachi" required></label>
-                  <label>Address<input type="text" name="address" [(ngModel)]="registerForm.address" placeholder="Street, area, city" required></label>
+                  <label class="full-span">
+                    {{ t('location') }}
+                    <div class="search-input-wrap">
+                      <input
+                        type="text"
+                        name="register_location"
+                        [ngModel]="registerLocationInput()"
+                        (ngModelChange)="onRegisterLocationInput($event)"
+                        (focus)="openRegisterLocationMenu()"
+                        (blur)="deferCloseRegisterLocationMenu()"
+                        placeholder="Karachi, DHA, Clifton"
+                        autocomplete="off"
+                        required>
+                      <button type="button" class="search-field-toggle" (mousedown)="$event.preventDefault()" (click)="openRegisterLocationMenu()" aria-label="Open location suggestions"></button>
+                      @if (registerLocationMenuOpen() && (registerLocationSuggestionOptions(registerLocationSuggestions()).length || registerLocationSuggestionsLoading())) {
+                        <div class="search-suggestion-panel">
+                          @if (registerLocationSuggestionsLoading()) {
+                            <div class="search-suggestion-meta">Searching map suggestions...</div>
+                          }
+                          @for (suggestion of registerLocationSuggestionOptions(registerLocationSuggestions()); track suggestion.label) {
+                            <button type="button" class="search-suggestion-item" (mousedown)="$event.preventDefault()" (click)="selectRegisterLocationSuggestion(suggestion.label)">
+                              <span>{{ suggestion.label }}</span>
+                              <small class="search-suggestion-tag">{{ suggestion.source === 'map' ? 'Map' : 'Saved' }}</small>
+                            </button>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </label>
                   <label>Password<input type="password" name="password" [(ngModel)]="registerForm.password" placeholder="Create password" required></label>
                   <label>Confirm password<input type="password" name="password_confirmation" [(ngModel)]="registerForm.password_confirmation" placeholder="Repeat password" required></label>
                 </div>
