@@ -58,7 +58,7 @@ class SpaPageController extends Controller
                 'short_description' => $service->short_description,
                 'price' => (float) $service->price,
                 'duration_minutes' => $service->duration_minutes,
-                'image_url' => $service->image_path ? asset($service->image_path) : null,
+                'image_url' => $this->publicAssetUrl($request, $service->image_path),
                 'category' => $service->category?->name,
                 'categories' => $service->categories->pluck('name')->values()->all(),
                 'provider' => [
@@ -118,7 +118,7 @@ class SpaPageController extends Controller
                 'price' => (float) $service->price,
                 'price_type' => $service->price_type,
                 'duration_minutes' => $service->duration_minutes,
-                'image_url' => $service->image_path ? asset($service->image_path) : null,
+                'image_url' => $this->publicAssetUrl($request, $service->image_path),
                 'category' => $service->category?->name,
                 'categories' => $service->categories->pluck('name')->values()->all(),
                 'provider' => [
@@ -243,6 +243,15 @@ class SpaPageController extends Controller
     protected function googleMapSearchUrl(string $location): string
     {
         return 'https://www.google.com/maps/search/?api=1&query=' . urlencode($location);
+    }
+
+    protected function publicAssetUrl(Request $request, ?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        return rtrim($request->getSchemeAndHttpHost(), '/') . '/' . ltrim($path, '/');
     }
 
     protected function locationSuggestions(): array

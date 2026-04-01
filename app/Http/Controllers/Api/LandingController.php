@@ -81,7 +81,7 @@ class LandingController extends Controller
                     'slug' => $category->slug,
                     'description' => $category->description,
                     'services_count' => $category->services_count,
-                    'image_url' => $categoryImage?->image_path ? asset($categoryImage->image_path) : null,
+                    'image_url' => $this->publicAssetUrl($request, $categoryImage?->image_path),
                 ];
             });
 
@@ -99,7 +99,7 @@ class LandingController extends Controller
                 'short_description' => $service->short_description,
                 'price' => (float) $service->price,
                 'duration_minutes' => $service->duration_minutes,
-                'image_url' => $service->image_path ? asset($service->image_path) : null,
+                'image_url' => $this->publicAssetUrl($request, $service->image_path),
                 'category' => $service->category?->name,
                 'categories' => $service->categories->pluck('name')->values()->all(),
                 'provider' => [
@@ -142,7 +142,7 @@ class LandingController extends Controller
                 'voiceover' => $guide->voiceover ?? [],
                 'captions' => $guide->captions ?? [],
                 'videoType' => $guide->video_type,
-                'videoUrl' => $guide->video_type === 'mp4' ? ($guide->video_path ? asset($guide->video_path) : null) : $guide->video_url,
+                'videoUrl' => $guide->video_type === 'mp4' ? $this->publicAssetUrl($request, $guide->video_path) : $guide->video_url,
                 'videoEmbedUrl' => $guide->video_type === 'youtube' ? $this->youtubeEmbedUrl($guide->video_url) : null,
             ])
             ->values();
@@ -288,5 +288,14 @@ class LandingController extends Controller
         }
 
         return $url;
+    }
+
+    protected function publicAssetUrl(Request $request, ?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        return rtrim($request->getSchemeAndHttpHost(), '/') . '/' . ltrim($path, '/');
     }
 }
