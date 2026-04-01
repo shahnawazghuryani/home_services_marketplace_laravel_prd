@@ -202,7 +202,7 @@ class ServiceController extends Controller
                 'price' => (float) $service->price,
                 'price_type' => $service->price_type,
                 'duration_minutes' => $service->duration_minutes,
-                'image_path' => $this->publicAssetUrl($request, $service->image_path),
+                'image_path' => $this->publicAssetUrl($service->image_path),
                 'is_active' => (bool) $service->is_active,
             ] : null,
             'categories' => Category::orderBy('name')->get(['id', 'name']),
@@ -437,13 +437,18 @@ class ServiceController extends Controller
         return 'https://www.google.com/maps/search/?api=1&query=' . urlencode($location);
     }
 
-    protected function publicAssetUrl(Request $request, ?string $path): ?string
+    protected function publicAssetUrl(?string $path): ?string
     {
         if (! $path) {
             return null;
         }
 
-        return rtrim($request->getSchemeAndHttpHost(), '/') . '/' . ltrim($path, '/');
+        $normalizedPath = ltrim($path, '/');
+        if (! file_exists(public_path($normalizedPath))) {
+            return null;
+        }
+
+        return '/' . $normalizedPath;
     }
 
     protected function locationSuggestions(): array
