@@ -289,7 +289,7 @@ class ServiceController extends Controller
             'price' => ['nullable', 'numeric', 'min:0'],
             'price_type' => ['nullable', Rule::in(['fixed', 'hourly'])],
             'duration_minutes' => ['nullable', 'integer', 'min:0'],
-            'image' => ['nullable', 'image', 'max:10240'],
+            'image' => ['nullable', 'image', 'max:20480'],
             'generated_image_svg' => ['nullable', 'string', 'max:30000'],
             'is_active' => ['nullable', 'boolean'],
         ]);
@@ -335,7 +335,7 @@ class ServiceController extends Controller
     protected function uploadErrorMessage(int $code): string
     {
         return match ($code) {
-            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Image is too large for current upload limits. Please upload a smaller file (recommended under 10MB).',
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Image is too large for current upload limits. Please upload a smaller file (recommended under 20MB).',
             UPLOAD_ERR_PARTIAL => 'Image upload was interrupted. Please try again.',
             UPLOAD_ERR_NO_FILE => 'No image file was selected.',
             UPLOAD_ERR_NO_TMP_DIR => 'Server upload temp folder is missing. Please contact admin.',
