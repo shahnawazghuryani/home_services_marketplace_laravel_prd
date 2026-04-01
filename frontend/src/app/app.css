@@ -183,3 +183,29 @@
   color: #9aa3af;
   font-size: 0.8rem;
 }
+
+.search-suggestion-meta {
+  padding: 10px 12px 6px;
+  color: #9aa3af;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+}
+
+.search-suggestion-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.search-suggestion-tag {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 193, 7, 0.25);
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffd45c;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}

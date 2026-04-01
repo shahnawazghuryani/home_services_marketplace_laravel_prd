@@ -365,6 +365,11 @@ interface AiProviderRecommendationsResponse {
   providers: AiRecommendedProvider[];
 }
 
+interface MapLocationSuggestion {
+  label: string;
+  source: 'saved' | 'map';
+}
+
 type LocaleKey = 'en' | 'ur' | 'sd';
 type CopyMap = Record<LocaleKey, Record<string, string>>;
 
@@ -663,10 +668,14 @@ export class App {
   readonly category = signal('');
   readonly categoryInput = signal('');
   readonly locationMenuOpen = signal(false);
+  readonly locationRemoteSuggestions = signal<string[]>([]);
+  readonly locationSuggestionsLoading = signal(false);
   readonly categoryMenuOpen = signal(false);
   readonly serviceCategoryMenuOpen = signal(false);
   readonly serviceCategorySearch = signal('');
   private serviceCategoryCloseTimer: ReturnType<typeof window.setTimeout> | null = null;
+  private locationSuggestionTimer: ReturnType<typeof window.setTimeout> | null = null;
+  private locationSuggestionAbort: AbortController | null = null;
   readonly locale = signal<LocaleKey>('en');
   readonly currentLocationText = signal(COPY.ur['allowLocation']);
   readonly currentPath = signal(this.readPath());
@@ -1137,6 +1146,7 @@ export class App {
   onLocationInputChange(value: string): void {
     this.location.set(value);
     this.locationMenuOpen.set(true);
+    this.scheduleRemoteLocationSuggestions(value);
   }
 
   onCategoryInputChange(value: string, categories: Array<{ id: number; name: string; slug: string }>): void {
@@ -1158,6 +1168,7 @@ export class App {
 
   openLocationMenu(): void {
     this.locationMenuOpen.set(true);
+    this.scheduleRemoteLocationSuggestions(this.location());
   }
 
   openCategoryMenu(): void {
@@ -1181,10 +1192,29 @@ export class App {
   }
 
   filteredLocationSuggestions(suggestions: string[]): string[] {
-    const term = this.location().trim().toLowerCase();
+    return this.locationSuggestionOptions(suggestions).map((item) => item.label);
+  }
 
-    return suggestions
+  locationSuggestionOptions(suggestions: string[]): MapLocationSuggestion[] {
+    const term = this.location().trim().toLowerCase();
+    const local = suggestions
       .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
+      .map((suggestion) => ({ label: suggestion, source: 'saved' as const }));
+    const remote = this.locationRemoteSuggestions()
+      .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
+      .map((suggestion) => ({ label: suggestion, source: 'map' as const }));
+    const seen = new Set<string>();
+
+    return [...local, ...remote]
+      .filter((item) => {
+        const key = item.label.trim().toLowerCase();
+        if (!key || seen.has(key)) {
+          return false;
+        }
+
+        seen.add(key);
+        return true;
+      })
       .slice(0, 8);
   }
 
@@ -1198,6 +1228,7 @@ export class App {
 
   selectLocationSuggestion(suggestion: string): void {
     this.location.set(suggestion);
+    this.locationRemoteSuggestions.set([]);
     this.locationMenuOpen.set(false);
     this.submitServiceSearch();
   }
@@ -1372,6 +1403,77 @@ export class App {
       phone,
       `Hello ${safeName}, I found you on GharKaam and I need help${serviceLine}. Please share the details. Thank you.`
     );
+  }
+
+  private scheduleRemoteLocationSuggestions(value: string): void {
+    const query = value.trim();
+
+    if (this.locationSuggestionTimer !== null) {
+      window.clearTimeout(this.locationSuggestionTimer);
+      this.locationSuggestionTimer = null;
+    }
+
+    if (this.locationSuggestionAbort) {
+      this.locationSuggestionAbort.abort();
+      this.locationSuggestionAbort = null;
+    }
+
+    if (query.length < 2) {
+      this.locationRemoteSuggestions.set([]);
+      this.locationSuggestionsLoading.set(false);
+      return;
+    }
+
+    this.locationSuggestionTimer = window.setTimeout(() => {
+      this.fetchRemoteLocationSuggestions(query);
+    }, 260);
+  }
+
+  private fetchRemoteLocationSuggestions(query: string): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    this.locationSuggestionsLoading.set(true);
+    this.locationSuggestionAbort = new AbortController();
+
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=pk&addressdetails=1&q=${encodeURIComponent(query)}`;
+
+    fetch(url, {
+      signal: this.locationSuggestionAbort.signal,
+      headers: {
+        'Accept': 'application/json',
+      },
+    })
+      .then((response) => response.ok ? response.json() : [])
+      .then((results: Array<{ display_name?: string }>) => {
+        this.locationRemoteSuggestions.set(
+          (results ?? [])
+            .map((item) => this.compactLocationLabel(item.display_name ?? ''))
+            .filter((item) => item.length > 0)
+        );
+        this.locationSuggestionsLoading.set(false);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
+
+        this.locationRemoteSuggestions.set([]);
+        this.locationSuggestionsLoading.set(false);
+      })
+      .finally(() => {
+        this.locationSuggestionAbort = null;
+      });
+  }
+
+  private compactLocationLabel(value: string): string {
+    const parts = value
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    return parts.slice(0, 3).join(', ');
   }
 
   toggleServiceCategory(categoryId: number | string): void {

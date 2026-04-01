@@ -82,11 +82,15 @@
                         inputmode="search"
                         [placeholder]="t('locationPlaceholder')">
                       <button type="button" class="search-field-toggle" (mousedown)="$event.preventDefault()" (click)="openLocationMenu()" aria-label="Open location suggestions"></button>
-                      @if (locationMenuOpen() && filteredLocationSuggestions(view.location_suggestions).length) {
+                      @if (locationMenuOpen() && (locationSuggestionOptions(view.location_suggestions).length || locationSuggestionsLoading())) {
                         <div class="search-suggestion-panel">
-                          @for (suggestion of filteredLocationSuggestions(view.location_suggestions); track suggestion) {
-                            <button type="button" class="search-suggestion-item" (mousedown)="$event.preventDefault()" (click)="selectLocationSuggestion(suggestion)">
-                              {{ suggestion }}
+                          @if (locationSuggestionsLoading()) {
+                            <div class="search-suggestion-meta">Searching map suggestions...</div>
+                          }
+                          @for (suggestion of locationSuggestionOptions(view.location_suggestions); track suggestion.label) {
+                            <button type="button" class="search-suggestion-item" (mousedown)="$event.preventDefault()" (click)="selectLocationSuggestion(suggestion.label)">
+                              <span>{{ suggestion.label }}</span>
+                              <small class="search-suggestion-tag">{{ suggestion.source === 'map' ? 'Map' : 'Saved' }}</small>
                             </button>
                           }
                         </div>
@@ -293,11 +297,15 @@
                         inputmode="search"
                         [placeholder]="t('locationPlaceholder')">
                       <button type="button" class="search-field-toggle" (mousedown)="$event.preventDefault()" (click)="openLocationMenu()" aria-label="Open location suggestions"></button>
-                      @if (locationMenuOpen() && filteredLocationSuggestions(list.location_suggestions).length) {
+                      @if (locationMenuOpen() && (locationSuggestionOptions(list.location_suggestions).length || locationSuggestionsLoading())) {
                         <div class="search-suggestion-panel">
-                          @for (suggestion of filteredLocationSuggestions(list.location_suggestions); track suggestion) {
-                            <button type="button" class="search-suggestion-item" (mousedown)="$event.preventDefault()" (click)="selectLocationSuggestion(suggestion)">
-                              {{ suggestion }}
+                          @if (locationSuggestionsLoading()) {
+                            <div class="search-suggestion-meta">Searching map suggestions...</div>
+                          }
+                          @for (suggestion of locationSuggestionOptions(list.location_suggestions); track suggestion.label) {
+                            <button type="button" class="search-suggestion-item" (mousedown)="$event.preventDefault()" (click)="selectLocationSuggestion(suggestion.label)">
+                              <span>{{ suggestion.label }}</span>
+                              <small class="search-suggestion-tag">{{ suggestion.source === 'map' ? 'Map' : 'Saved' }}</small>
                             </button>
                           }
                         </div>
