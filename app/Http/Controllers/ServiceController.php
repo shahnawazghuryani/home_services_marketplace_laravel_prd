@@ -443,7 +443,20 @@ class ServiceController extends Controller
             return null;
         }
 
-        $normalizedPath = trim((string) $path, '/');
+        $raw = trim((string) $path);
+        if ($raw === '') {
+            return null;
+        }
+
+        if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
+            $raw = (string) (parse_url($raw, PHP_URL_PATH) ?? '');
+        }
+
+        if (str_starts_with($raw, '/media/')) {
+            return $raw;
+        }
+
+        $normalizedPath = trim($raw, '/');
 
         return $normalizedPath === ''
             ? null
