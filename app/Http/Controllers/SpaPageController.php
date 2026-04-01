@@ -107,6 +107,15 @@ class SpaPageController extends Controller
             ->get();
 
         $providerLocationLabel = $this->providerLocationLabel($service);
+        $serviceImageUrl = $this->publicAssetUrl($service->image_path);
+        $fallbackCoverImageUrl = $serviceImageUrl
+            ?? $this->publicAssetUrl(
+                Service::query()
+                    ->where('provider_id', $service->provider_id)
+                    ->whereNotNull('image_path')
+                    ->latest('id')
+                    ->value('image_path')
+            );
 
         return response()->json([
             'service' => [
@@ -118,7 +127,7 @@ class SpaPageController extends Controller
                 'price' => (float) $service->price,
                 'price_type' => $service->price_type,
                 'duration_minutes' => $service->duration_minutes,
-                'image_url' => $this->publicAssetUrl($service->image_path),
+                'image_url' => $serviceImageUrl,
                 'category' => $service->category?->name,
                 'categories' => $service->categories->pluck('name')->values()->all(),
                 'provider' => [
@@ -129,6 +138,7 @@ class SpaPageController extends Controller
                     'service_area' => $service->provider->service_area,
                 ],
             ],
+            'cover_image_url' => $fallbackCoverImageUrl,
             'provider_location_label' => $providerLocationLabel,
             'provider_map_url' => $this->googleMapEmbedUrl($providerLocationLabel),
             'provider_map_search_url' => $this->googleMapSearchUrl($providerLocationLabel),
@@ -152,6 +162,18 @@ class SpaPageController extends Controller
         $provider = Provider::with(['user', 'services.category', 'services.categories', 'reviews.customer'])
             ->whereNotNull('approved_at')
             ->findOrFail($provider);
+        $services = $provider->services
+            ->map(fn (Service $service) => [
+                'id' => $service->id,
+                'title' => $service->title,
+                'slug' => $service->slug,
+                'price' => (float) $service->price,
+                'category' => $service->category?->name,
+                'categories' => $service->categories->pluck('name')->values()->all(),
+                'image_url' => $this->publicAssetUrl($service->image_path),
+            ])
+            ->values();
+        $coverImageUrl = ($services->first(fn (array $service) => filled($service['image_url'])) ?? [])['image_url'] ?? null;
 
         $locationLabel = collect([
             $provider->service_area,
@@ -173,17 +195,11 @@ class SpaPageController extends Controller
                 'availability' => $provider->availability,
                 'approved' => (bool) $provider->approved_at,
             ],
+            'cover_image_url' => $coverImageUrl,
             'location_label' => $locationLabel,
             'provider_map_url' => $this->googleMapEmbedUrl($locationLabel),
             'provider_map_search_url' => $this->googleMapSearchUrl($locationLabel),
-            'services' => $provider->services->map(fn (Service $service) => [
-                'id' => $service->id,
-                'title' => $service->title,
-                'slug' => $service->slug,
-                'price' => (float) $service->price,
-                'category' => $service->category?->name,
-                'categories' => $service->categories->pluck('name')->values()->all(),
-            ]),
+            'services' => $services,
             'reviews' => $provider->reviews
                 ->sortByDesc('id')
                 ->take(6)

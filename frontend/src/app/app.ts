@@ -282,6 +282,7 @@ interface ServiceDetailResponse {
     description: string;
     price_type: string;
   };
+  cover_image_url?: string | null;
   provider_location_label: string;
   provider_map_url: string;
   provider_map_search_url: string;
@@ -305,6 +306,7 @@ interface ProviderDetailResponse {
     availability: string;
     approved: boolean;
   };
+  cover_image_url?: string | null;
   location_label: string;
   provider_map_url: string;
   provider_map_search_url: string;
@@ -315,6 +317,7 @@ interface ProviderDetailResponse {
     price: number;
     category: string | null;
     categories?: string[];
+    image_url?: string | null;
   }>;
   reviews: Array<{
     rating: number;
@@ -375,7 +378,7 @@ const COPY: CopyMap = {
     whatNeed: 'What do you need?',
     whatNeedPlaceholder: 'Plumber, electrician, AC repair',
     location: 'Location',
-    locationPlaceholder: 'Karachi, DHA, Clifton',
+    locationPlaceholder: 'Select location',
     category: 'Category',
     allCategories: 'All categories',
     search: 'Search',
@@ -466,7 +469,7 @@ const COPY: CopyMap = {
     whatNeed: 'آپ کو کیا چاہیے؟',
     whatNeedPlaceholder: 'پلمبر، الیکٹریشن، اے سی مرمت',
     location: 'لوکیشن',
-    locationPlaceholder: 'کراچی، ڈی ایچ اے، کلفٹن',
+    locationPlaceholder: 'لوکیشن منتخب کریں',
     category: 'کیٹیگری',
     allCategories: 'تمام کیٹیگریز',
     search: 'سرچ',
@@ -557,7 +560,7 @@ const COPY: CopyMap = {
     whatNeed: 'توهان کي ڇا گهرجي؟',
     whatNeedPlaceholder: 'پلمبر، اليڪٽريشن، اي سي مرمت',
     location: 'جڳهه',
-    locationPlaceholder: 'ڪراچي، ڊي ايڇ اي، ڪلفٽن',
+    locationPlaceholder: 'جڳهه چونڊيو',
     category: 'ڪيٽيگري',
     allCategories: 'سڀ ڪيٽيگريون',
     search: 'سرچ',

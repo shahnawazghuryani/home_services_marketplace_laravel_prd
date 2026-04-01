@@ -416,8 +416,8 @@
         } @else if (serviceDetailData(); as detail) {
           <div class="detail-grid">
             <div class="card detail-panel">
-              @if (detail.service.image_url) {
-                <img class="detail-cover" [src]="detail.service.image_url" [alt]="detail.service.title">
+              @if (detail.cover_image_url || detail.service.image_url) {
+                <img class="detail-cover" [src]="detail.cover_image_url || detail.service.image_url" [alt]="detail.service.title">
               } @else {
                 <div class="detail-cover"></div>
               }
@@ -511,6 +511,11 @@
         } @else if (providerDetailData(); as detail) {
           <div class="grid grid-2">
             <div class="card map-card">
+              @if (detail.cover_image_url) {
+                <img class="detail-cover" [src]="detail.cover_image_url" [alt]="detail.provider.name">
+              } @else {
+                <div class="detail-cover"></div>
+              }
               <div>
                 <span class="badge">{{ detail.provider.service_area }}</span>
                 <h1>{{ detail.provider.name }}</h1>
