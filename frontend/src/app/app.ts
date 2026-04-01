@@ -693,82 +693,82 @@ export class App {
   readonly userGuideVideos: UserGuideVideo[] = [
     {
       id: 'customer-search',
-      title: 'Service dhoondhna aur provider select karna',
+      title: 'Finding a service and choosing a provider',
       duration: '01:10',
-      summary: 'User ko batayein ke homepage se service, city aur category select karke best provider kaise dekhna hai.',
-      audience: 'Naye customer',
+      summary: 'Shows users how to select a service, city, and category from the homepage to find the best provider.',
+      audience: 'New customers',
       steps: [
-        'Homepage khol kar search box mein apni zarurat likhein.',
-        'Location aur category select karke results dekhein.',
-        'Provider profile aur pricing compare karke service open karein.',
+        'Open the homepage and enter your need in the search area.',
+        'Choose a location and category to view results.',
+        'Compare provider profiles and pricing before opening a service.',
       ],
       voiceover: [
-        'Assalamualaikum. GharKaam par aap ghar ke kaam ke liye trusted service asani se dhoondh sakte hain.',
-        'Search box mein apni zarurat likhein, jaise plumber, electrician ya cleaning.',
-        'Phir location aur category select karke search button dabayein.',
-        'Results mein provider ka area, price aur reviews compare karein.',
-        'Jo service pasand aaye us ki detail page open karke behtar faisla karein.',
+        'Welcome to GharKaam, where you can quickly find trusted home services.',
+        'Enter what you need in the search area, such as plumber, electrician, or cleaning.',
+        'Then select a location and category and press search.',
+        'Compare the provider area, price, and reviews in the results.',
+        'Open the service details page to make a confident decision.',
       ],
       captions: [
-        'GharKaam par service dhoondhna bohat asaan hai',
-        'Apni zarurat likhein aur search karein',
-        'Location aur category select karein',
-        'Price, area aur reviews compare karein',
-        'Best provider choose karke next step par jaayein',
+        'Finding a service on GharKaam is simple',
+        'Enter your requirement and search',
+        'Choose location and category',
+        'Compare price, area, and reviews',
+        'Pick the best provider and continue',
       ],
       videoUrl: null,
     },
     {
       id: 'customer-booking',
-      title: 'Account banana aur booking submit karna',
+      title: 'Creating an account and submitting a booking',
       duration: '01:20',
-      summary: 'Signup, login, booking form, aur booking confirmation ka complete flow simple Urdu mein.',
+      summary: 'Covers signup, login, the booking form, and booking confirmation in a simple flow.',
       audience: 'Customer onboarding',
       steps: [
-        'Register ya login karein.',
-        'Service detail page se booking form open karein.',
-        'Date, address aur notes ke saath request submit karein.',
+        'Register or log in.',
+        'Open the booking form from the service detail page.',
+        'Submit your request with date, address, and notes.',
       ],
       voiceover: [
-        'Booking karne ke liye sab se pehle apna account bana lein ya login karein.',
-        'Register form mein basic details fill karke account create karein.',
-        'Login ke baad service detail page par Book button dabayein.',
-        'Booking form mein date, address aur notes add karein.',
-        'Submit karne ke baad dashboard se booking status dekhte rahein.',
+        'To place a booking, first create your account or log in.',
+        'Fill in the basic details in the registration form to create your account.',
+        'After login, press the Book button on the service detail page.',
+        'Add the date, address, and notes in the booking form.',
+        'After submitting, track the booking status from your dashboard.',
       ],
       captions: [
-        'Step 1: Login ya Register karein',
-        'Apni basic details fill karein',
-        'Book button dabayein',
-        'Date, address aur notes enter karein',
-        'Dashboard se booking status track karein',
+        'Step 1: Log in or register',
+        'Fill in your basic details',
+        'Press the Book button',
+        'Enter date, address, and notes',
+        'Track booking status from the dashboard',
       ],
       videoUrl: null,
     },
     {
       id: 'provider-flow',
-      title: 'Provider dashboard aur service create karna',
+      title: 'Using the provider dashboard and creating a service',
       duration: '01:30',
-      summary: 'Providers ko dashboard, profile update aur AI Service Builder se service create karne ka short guide.',
+      summary: 'A short guide for providers covering the dashboard, profile updates, and creating services with the AI Service Builder.',
       audience: 'Service providers',
       steps: [
-        'Provider account se login karke dashboard open karein.',
-        'Profile aur service area complete karein.',
-        'AI prompt ya manual form se nayi service create karein.',
+        'Log in with your provider account and open the dashboard.',
+        'Complete your profile and service area.',
+        'Create a new service using the AI prompt or the manual form.',
       ],
       voiceover: [
-        'Provider login ke baad aap apna poora dashboard use kar sakte hain.',
-        'Profile complete karein taake customer ko aap ki information clear nazar aaye.',
-        'Add Service page open karke nayi service create karein.',
-        'AI Service Builder mein simple prompt likh kar quick draft hasil karein.',
-        'Review ke baad service save karein aur customers ke liye live ho jaayein.',
+        'After provider login, you can use your full dashboard.',
+        'Complete your profile so customers can clearly understand your information.',
+        'Open the Add Service page to create a new service.',
+        'Use a simple prompt in the AI Service Builder to generate a quick draft.',
+        'Review the draft, save the service, and publish it for customers.',
       ],
       captions: [
-        'Provider login karein',
-        'Dashboard se sab manage karein',
-        'Profile complete karein',
-        'AI se quick draft banayein',
-        'Service save karke live ho jaayein',
+        'Log in as a provider',
+        'Manage everything from the dashboard',
+        'Complete your profile',
+        'Generate a quick AI draft',
+        'Save the service and go live',
       ],
       videoUrl: null,
     },
@@ -906,8 +906,8 @@ export class App {
     return COPY[this.locale()][key] ?? COPY.en[key] ?? key;
   }
 
-  setLocale(locale: LocaleKey): void {
-    this.applyLocale(locale);
+  setLocale(_locale: LocaleKey): void {
+    this.applyLocale('en');
   }
 
   toggleMobileNav(): void {
@@ -1028,11 +1028,14 @@ export class App {
   }
 
   supportWhatsAppNumber(): string {
-    return this.dashboard()?.support?.whatsapp || '923083259933';
+    return this.normalizeWhatsAppNumber(this.dashboard()?.support?.whatsapp || this.supportPhone() || '923083259933');
   }
 
   supportWhatsAppUrl(): string {
-    return `https://wa.me/${this.supportWhatsAppNumber()}`;
+    return this.buildWhatsAppUrl(
+      this.supportWhatsAppNumber(),
+      'Hello GharKaam team, I need help with a service request. Please guide me. Thank you.'
+    );
   }
 
   contactUrl(): string {
@@ -1309,7 +1312,7 @@ export class App {
         },
         error: (error) => {
           this.serviceCategoryCreateLoading.set(false);
-          this.authError.set(error?.error?.message ?? 'Category create nahi ho saki.');
+          this.authError.set(error?.error?.message ?? 'Category could not be created.');
         }
       });
   }
@@ -1325,6 +1328,50 @@ export class App {
 
   formatPhone(phone: string): string {
     return phone.replace(/\D+/g, '');
+  }
+
+  normalizeWhatsAppNumber(phone: string | null | undefined): string {
+    const digits = this.formatPhone(phone ?? '');
+
+    if (!digits) {
+      return '';
+    }
+
+    if (digits.startsWith('92')) {
+      return digits;
+    }
+
+    if (digits.startsWith('0')) {
+      return `92${digits.slice(1)}`;
+    }
+
+    if (digits.length === 10) {
+      return `92${digits}`;
+    }
+
+    return digits;
+  }
+
+  buildWhatsAppUrl(phone: string | null | undefined, message: string): string {
+    const normalizedPhone = this.normalizeWhatsAppNumber(phone);
+    const encodedMessage = encodeURIComponent(message.trim());
+
+    if (!normalizedPhone) {
+      return `https://wa.me/?text=${encodedMessage}`;
+    }
+
+    return `https://wa.me/${normalizedPhone}?text=${encodedMessage}`;
+  }
+
+  providerWhatsAppUrl(phone: string, providerName?: string | null, serviceTitle?: string | null): string {
+    const safeName = (providerName ?? 'there').trim() || 'there';
+    const safeService = (serviceTitle ?? '').trim();
+    const serviceLine = safeService ? ` about "${safeService}"` : '';
+
+    return this.buildWhatsAppUrl(
+      phone,
+      `Hello ${safeName}, I found you on GharKaam and I need help${serviceLine}. Please share the details. Thank you.`
+    );
   }
 
   toggleServiceCategory(categoryId: number | string): void {
@@ -1532,7 +1579,7 @@ export class App {
           this.dashboardLoading.set(false);
         },
         error: () => {
-          this.dashboardError.set('Dashboard load nahi ho saka.');
+          this.dashboardError.set('Dashboard could not be loaded.');
           this.dashboardLoading.set(false);
         }
       });
@@ -1836,7 +1883,7 @@ export class App {
         },
         error: (error) => {
           this.aiBookingLoading.set(false);
-          this.authError.set(error?.error?.message ?? 'AI booking helper temporarily unavailable hai. Please dobara try karein.');
+          this.authError.set(error?.error?.message ?? 'AI booking helper is temporarily unavailable. Please try again.');
         }
       });
   }
@@ -1864,7 +1911,7 @@ export class App {
         },
         error: (error) => {
           this.aiProviderLoading.set(false);
-          this.authError.set(error?.error?.message ?? 'AI recommendations temporarily unavailable hain. Please dobara try karein.');
+          this.authError.set(error?.error?.message ?? 'AI recommendations are temporarily unavailable. Please try again.');
         }
       });
   }
@@ -1873,7 +1920,7 @@ export class App {
     const prompt = this.serviceBuilderPrompt.trim();
 
     if (!prompt) {
-      this.authError.set('Provider prompt likhein, jaise plumber, electrical, AC service.');
+      this.authError.set('Enter a provider prompt, such as plumber, electrical, or AC service.');
       return;
     }
 
@@ -1904,7 +1951,7 @@ export class App {
         },
         error: (error) => {
           this.aiServiceBuilderLoading.set(false);
-          this.authError.set(error?.error?.message ?? 'AI service builder temporarily unavailable hai. Please dobara try karein.');
+          this.authError.set(error?.error?.message ?? 'AI service builder is temporarily unavailable. Please try again.');
         }
       });
   }
@@ -1915,7 +1962,7 @@ export class App {
 
     if (this.serviceForm.category_ids.length === 0 && !this.serviceForm.category_id) {
       this.authLoading.set(false);
-      this.authError.set('At least one category select karein.');
+      this.authError.set('Select at least one category.');
       return;
     }
 
@@ -2052,19 +2099,20 @@ export class App {
   }
 
   private applyLocale(locale: LocaleKey): void {
-    this.locale.set(locale);
+    const nextLocale: LocaleKey = 'en';
+    this.locale.set(nextLocale);
     this.currentLocationText.set(this.t('allowLocation'));
-    document.documentElement.lang = locale;
-    document.documentElement.dir = locale === 'en' ? 'ltr' : 'rtl';
+    document.documentElement.lang = nextLocale;
+    document.documentElement.dir = 'ltr';
     document.body.classList.remove('locale-en', 'locale-ur', 'locale-sd');
-    document.body.classList.add(`locale-${locale}`);
-    localStorage.setItem('gharkaam_locale', locale);
+    document.body.classList.add(`locale-${nextLocale}`);
+    localStorage.setItem('gharkaam_locale', nextLocale);
   }
 
   private readStoredLocale(): LocaleKey {
     const stored = localStorage.getItem('gharkaam_locale');
 
-    return stored === 'en' || stored === 'sd' ? stored : 'ur';
+    return stored === 'en' ? stored : 'en';
   }
 
   private readPath(): string {
@@ -2208,7 +2256,7 @@ export class App {
           this.pageLoading.set(false);
         },
         error: () => {
-          this.pageError.set('Profile page load nahi ho saka.');
+          this.pageError.set('Profile page could not be loaded.');
           this.pageLoading.set(false);
         }
       });
@@ -2248,7 +2296,7 @@ export class App {
           this.pageLoading.set(false);
         },
         error: () => {
-          this.pageError.set('Service form load nahi ho saka.');
+          this.pageError.set('Service form could not be loaded.');
           this.pageLoading.set(false);
         }
       });
@@ -2276,7 +2324,7 @@ export class App {
           this.pageLoading.set(false);
         },
         error: () => {
-          this.pageError.set('Services load nahi ho sakin.');
+          this.pageError.set('Services could not be loaded.');
           this.pageLoading.set(false);
         }
       });
@@ -2295,7 +2343,7 @@ export class App {
           this.pageLoading.set(false);
         },
         error: () => {
-          this.pageError.set('Service details load nahi ho sakin.');
+          this.pageError.set('Service details could not be loaded.');
           this.pageLoading.set(false);
         }
       });
@@ -2314,7 +2362,7 @@ export class App {
           this.pageLoading.set(false);
         },
         error: () => {
-          this.pageError.set('Provider details load nahi ho sakin.');
+          this.pageError.set('Provider details could not be loaded.');
           this.pageLoading.set(false);
         }
       });
@@ -2340,7 +2388,7 @@ export class App {
           this.pageLoading.set(false);
         },
         error: () => {
-          this.pageError.set('Booking page load nahi ho saka.');
+          this.pageError.set('Booking page could not be loaded.');
           this.pageLoading.set(false);
         }
       });

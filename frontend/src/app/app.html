@@ -61,7 +61,7 @@
                 <div class="search-panel-top simple">
                   <div class="search-copy">
                     <h3>{{ t('searchTitle') }}</h3>
-                    <p>Apni service, location aur category select karke search karein.</p>
+                    <p>Select your service, location, and category to search.</p>
                   </div>
                 </div>
                 @if (authError()) {
@@ -177,7 +177,7 @@
                     <div class="stack-actions">
                       <a class="btn brand" [href]="backendUrl('/services/' + service.slug)">{{ t('viewDetails') }}</a>
                       <a class="btn secondary" [href]="'tel:' + formatPhone(service.provider.phone)">{{ t('call') }}</a>
-                      <a class="btn secondary" [href]="'https://wa.me/' + formatPhone(service.provider.phone)" target="_blank" rel="noopener">{{ t('whatsapp') }}</a>
+                      <a class="btn secondary" [href]="providerWhatsAppUrl(service.provider.phone, service.provider.name, service.title)" target="_blank" rel="noopener">{{ t('whatsapp') }}</a>
                     </div>
                   </div>
                 </article>
@@ -209,7 +209,7 @@
                     <div class="stack-actions">
                       <a class="btn secondary" [href]="backendUrl('/providers/' + provider.id)">{{ t('profile') }}</a>
                       <a class="btn secondary" [href]="'tel:' + formatPhone(provider.phone)">{{ t('call') }}</a>
-                    <a class="btn brand" [href]="'https://wa.me/' + formatPhone(provider.phone)" target="_blank" rel="noopener">{{ t('whatsapp') }}</a>
+                    <a class="btn brand" [href]="providerWhatsAppUrl(provider.phone, provider.name)" target="_blank" rel="noopener">{{ t('whatsapp') }}</a>
                   </div>
                 </article>
               } @empty {
@@ -221,7 +221,7 @@
             </div>
           </section>
 
-          <section class="section guide-section" id="urdu-guides">
+          <section class="section guide-section" id="user-guides">
             <div class="section-head">
               <div>
                 <h2>{{ t('userGuide') }}</h2>
@@ -239,7 +239,7 @@
                   <div class="guide-card-body">
                     <div class="guide-meta-row">
                       <span class="badge">{{ guide.audience }}</span>
-                      <span class="guide-status">Urdu guide</span>
+                      <span class="guide-status">Video guide</span>
                     </div>
                     <h3>{{ guide.title }}</h3>
                     <p class="guide-summary">{{ guide.summary }}</p>
@@ -250,7 +250,7 @@
                     </div>
                     <div class="stack-actions">
                       <button type="button" class="btn secondary" (click)="openGuideVideo(guide)">{{ t('previewGuide') }}</button>
-                      <a class="btn brand" [href]="supportWhatsAppUrl()" target="_blank" rel="noopener">WhatsApp se mangwayen</a>
+                      <a class="btn brand" [href]="supportWhatsAppUrl()" target="_blank" rel="noopener">Request on WhatsApp</a>
                     </div>
                   </div>
                 </article>
@@ -272,7 +272,7 @@
                 <div class="search-panel-top simple">
                   <div class="search-copy">
                     <h3>{{ t('searchTitle') }}</h3>
-                    <p>Filters change karke results ko asani se refine karein.</p>
+                    <p>Adjust filters to refine the results quickly.</p>
                   </div>
                 </div>
                 @if (authError()) {
@@ -404,7 +404,7 @@
             </div>
           </section>
         } @else {
-          <div class="flash error">{{ pageError() || 'Services load nahi ho sakin.' }}</div>
+          <div class="flash error">{{ pageError() || 'Services could not be loaded.' }}</div>
         }
       </div>
     </main>
@@ -448,18 +448,18 @@
                   <button type="button" class="btn brand" (click)="goToLoginToBook(detail.service.slug)">Login to book</button>
                 }
                 <a class="btn secondary" [href]="'tel:' + formatPhone(detail.service.provider.phone)">{{ t('callProvider') }}</a>
-                <a class="btn brand" [href]="'https://wa.me/' + formatPhone(detail.service.provider.phone)" target="_blank" rel="noopener">WhatsApp</a>
+                <a class="btn brand" [href]="providerWhatsAppUrl(detail.service.provider.phone, detail.service.provider.name, detail.service.title)" target="_blank" rel="noopener">WhatsApp</a>
                 <a class="btn secondary" [href]="backendUrl('/providers/' + detail.service.provider.id)">View provider</a>
               </div>
               <div class="notice detail-note">
                 <strong>{{ t('aiProviderMatch') }}</strong>
-                <p class="detail-ai-copy">AI isi problem ke liye alternative providers recommend kar sakta hai.</p>
+                <p class="detail-ai-copy">AI can recommend alternative providers for this exact need.</p>
                 <div class="stack-actions">
                   <button type="button" class="btn secondary" (click)="runAiProviderRecommendations()" [disabled]="aiProviderLoading()">{{ aiProviderLoading() ? t('finding') : t('getAiRecommendations') }}</button>
                 </div>
                 @if (aiProviderResult(); as providerAi) {
                   <div class="notice detail-ai-result">
-                    <strong>Aap ke liye yeh providers match huay hain:</strong>
+                    <strong>These providers are a good match for you:</strong>
                     <p class="detail-ai-copy">{{ providerAi.summary }}</p>
                     @for (provider of providerAi.providers; track provider.id) {
                       <div class="detail-ai-provider">
@@ -468,7 +468,7 @@
                         <div class="muted">{{ provider.reason }}</div>
                         <div class="stack-actions">
                           <a class="btn secondary" [href]="'tel:' + formatPhone(provider.phone)">{{ t('callNow') }}</a>
-                          <a class="btn brand" [href]="'https://wa.me/' + formatPhone(provider.phone)" target="_blank" rel="noopener">WhatsApp</a>
+                          <a class="btn brand" [href]="providerWhatsAppUrl(provider.phone, provider.name)" target="_blank" rel="noopener">WhatsApp</a>
                         </div>
                       </div>
                     }
@@ -489,7 +489,7 @@
               <iframe class="map-embed" [attr.src]="detail.provider_map_url" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Provider location map"></iframe>
               <div>
                 <h3>Related services</h3>
-                <p class="muted">Isi category me aur bhi options available hain.</p>
+                <p class="muted">More options are available in this category.</p>
                 <div class="list">
                   @for (related of detail.related_services; track related.id) {
                     <a class="notice" [href]="backendUrl('/services/' + related.slug)">{{ related.title }} by {{ related.provider_name }} ({{ serviceCategoriesLabel(related) }})</a>
@@ -499,7 +499,7 @@
             </div>
           </div>
         } @else {
-          <div class="flash error">{{ pageError() || 'Service details load nahi ho sakin.' }}</div>
+          <div class="flash error">{{ pageError() || 'Service details could not be loaded.' }}</div>
         }
       </div>
     </main>
@@ -529,7 +529,7 @@
               </div>
               <div class="stack-actions">
                 <a class="btn secondary" [href]="'tel:' + formatPhone(detail.provider.phone)">{{ t('callNow') }}</a>
-                <a class="btn brand" [href]="'https://wa.me/' + formatPhone(detail.provider.phone)" target="_blank" rel="noopener">WhatsApp</a>
+                <a class="btn brand" [href]="providerWhatsAppUrl(detail.provider.phone, detail.provider.name)" target="_blank" rel="noopener">WhatsApp</a>
               </div>
               <div class="location-row">
                 <div class="notice">{{ detail.location_label }}</div>
@@ -568,7 +568,7 @@
             </div>
           </div>
         } @else {
-          <div class="flash error">{{ pageError() || 'Provider details load nahi ho sakin.' }}</div>
+          <div class="flash error">{{ pageError() || 'Provider details could not be loaded.' }}</div>
         }
       </div>
     </main>
@@ -595,7 +595,7 @@
             <div class="auth-card">
               <span class="badge">Complete your booking</span>
               <h1>Schedule service</h1>
-              <p class="muted">Correct date, address, aur payment method select karein taa ke provider ko clear booking request mile.</p>
+              <p class="muted">Select the correct date, address, and payment method so the provider receives a clear booking request.</p>
               @if (authError()) { <div class="flash error">{{ authError() }}</div> }
               <div class="notice" style="margin-bottom:16px;">
                 <strong>AI Booking Helper</strong>
@@ -647,7 +647,7 @@
             </div>
           </div>
         } @else {
-          <div class="flash error">{{ pageError() || 'Booking page load nahi ho saka.' }}</div>
+          <div class="flash error">{{ pageError() || 'Booking page could not be loaded.' }}</div>
         }
       </div>
     </main>
@@ -1027,7 +1027,7 @@
             }
           </div>
         } @else {
-          <div class="flash error">{{ dashboardError() || 'Dashboard load nahi ho saka.' }}</div>
+          <div class="flash error">{{ dashboardError() || 'Dashboard could not be loaded.' }}</div>
         }
       </div>
     </main>
@@ -1040,8 +1040,8 @@
           <div class="auth-grid">
             <div class="auth-showcase">
               <span class="kicker">{{ t('providerProfile') }}</span>
-              <h2>Apni profile ko professional banayein.</h2>
-              <p>Personal details, service area, availability, aur bio yahin update karein.</p>
+              <h2>Make your profile look professional.</h2>
+              <p>Update your personal details, service area, availability, and bio here.</p>
             </div>
             <div class="auth-card">
               <span class="badge">Edit profile</span>
@@ -1078,8 +1078,8 @@
           <div class="auth-grid service-form-shell">
             <div class="auth-showcase">
               <span class="kicker">{{ isAdminServiceEditPage() ? 'Admin Service Editor' : 'Service Form' }}</span>
-              <h2>{{ isAdminServiceEditPage() ? 'Provider service ko admin level par manage karein.' : 'Apni service details aur pricing update karein.' }}</h2>
-              <p>{{ isAdminServiceEditPage() ? 'Provider, category, pricing aur active status sab yahin se control hoga.' : 'Category, title, description, price, duration aur image yahin se manage karein.' }}</p>
+              <h2>{{ isAdminServiceEditPage() ? 'Manage provider services at the admin level.' : 'Update your service details and pricing.' }}</h2>
+              <p>{{ isAdminServiceEditPage() ? 'Provider, category, pricing, and active status are all controlled here.' : 'Manage category, title, description, price, duration, and image here.' }}</p>
             </div>
             <div class="auth-card">
               <span class="badge">{{ isAdminServiceEditPage() ? t('adminEdit') : (isProviderServiceCreatePage() ? t('addService') : t('editService')) }}</span>
@@ -1087,7 +1087,7 @@
               @if (authError()) { <div class="flash error">{{ authError() }}</div> }
               <div class="notice" style="margin-bottom:16px;">
                 <strong>AI Service Builder</strong>
-                <p style="margin:10px 0 0;">Simple text likhein, jaise: <em>mere pass plumber aur electrical service hai</em>. Hum title, category, description, price, duration aur soft image draft bana denge.</p>
+                <p style="margin:10px 0 0;">Write a simple prompt, for example: <em>I provide plumbing and electrical services</em>. We will generate a title, category, description, price, duration, and a soft image draft.</p>
                 <label style="margin-top:12px;">
                   {{ t('providerPrompt') }}
                   <textarea name="service_builder_prompt" [(ngModel)]="serviceBuilderPrompt" placeholder="Plumber, electrical, AC service, installation, repair..." rows="3"></textarea>
@@ -1189,7 +1189,7 @@
                         </div>
                       }
                     </div>
-                    <small class="muted">Search karke multiple categories select karein.</small>
+                    <small class="muted">Search and select multiple categories.</small>
                   </label>
                   <label>Service title<input type="text" name="title" [(ngModel)]="serviceForm.title" required></label>
                   <label>Short description<input type="text" name="short_description" [(ngModel)]="serviceForm.short_description" maxlength="255" placeholder="Quick one-line summary"></label>
@@ -1227,14 +1227,14 @@
         <div class="auth-grid">
           <div class="auth-showcase">
             <span class="kicker">{{ isLoginPage() ? 'Login' : 'Register' }}</span>
-            <h2>{{ isLoginPage() ? 'Login karke apna dashboard instantly open karein.' : 'Customer ya provider account asani se create karein.' }}</h2>
-            <p>{{ isLoginPage() ? 'Admin approvals, provider service management, customer bookings, aur reviews sab ek hi workflow me available hain.' : 'Quick signup ke baad aap turant services explore ya apna professional account setup kar sakte hain.' }}</p>
+            <h2>{{ isLoginPage() ? 'Log in to open your dashboard instantly.' : 'Create a customer or provider account easily.' }}</h2>
+            <p>{{ isLoginPage() ? 'Admin approvals, provider service management, customer bookings, and reviews are all available in one workflow.' : 'After a quick signup, you can explore services or set up your professional account right away.' }}</p>
           </div>
 
           <div class="auth-card">
             <span class="badge">{{ isLoginPage() ? 'Secure Login' : 'Registration' }}</span>
             <h1>{{ isLoginPage() ? 'Welcome back' : 'Create your account' }}</h1>
-            <p class="muted">{{ isLoginPage() ? 'Apna email aur password enter karein.' : 'Customer ya provider account create karne ke liye neeche form fill karein.' }}</p>
+            <p class="muted">{{ isLoginPage() ? 'Enter your email and password.' : 'Fill out the form below to create a customer or provider account.' }}</p>
 
             @if (authError()) {
               <div class="flash error">{{ authError() }}</div>
@@ -1310,7 +1310,7 @@
 
 @if (activeGuideVideo(); as guideModal) {
   <div class="guide-modal-backdrop" (click)="closeGuideVideo()"></div>
-  <section class="guide-modal" aria-label="Urdu guide video preview">
+  <section class="guide-modal" aria-label="Guide video preview">
     <div class="guide-modal-head">
       <div>
         <span class="badge">{{ guideModal.audience }}</span>
@@ -1327,7 +1327,7 @@
       <div class="guide-player-placeholder">
         <div class="guide-player-copy">
           <strong>Video slot ready</strong>
-          <p>MP4 ya YouTube embed milte hi yahi modal mein smooth video chalegi.</p>
+          <p>As soon as an MP4 or YouTube embed is available, the video will play here.</p>
           <div class="guide-duration">{{ guideModal.duration }}</div>
         </div>
       </div>

@@ -71,7 +71,13 @@ class SpaPageController extends Controller
                     'reviews_count' => (int) ($providerRatings->get($service->provider->user_id)->reviews_count ?? 0),
                 ],
             ]),
-            'categories' => Category::orderBy('name')->get(['id', 'name', 'slug']),
+            'categories' => Category::query()
+                ->whereHas('services', function ($categoryQuery) {
+                    $categoryQuery->where('is_active', true)
+                        ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'));
+                })
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug']),
             'location_suggestions' => $this->locationSuggestions(),
             'maps' => [
                 'googlePlacesEnabled' => filled(config('services.google_maps.browser_key')),
@@ -291,9 +297,15 @@ class SpaPageController extends Controller
     protected function locationSuggestions(): array
     {
         return collect()
-            ->merge(Provider::query()->whereNotNull('approved_at')->whereNotNull('service_area')->pluck('service_area'))
+            ->merge(Provider::query()
+                ->whereNotNull('approved_at')
+                ->whereNotNull('service_area')
+                ->whereHas('services', fn ($serviceQuery) => $serviceQuery->where('is_active', true))
+                ->pluck('service_area'))
             ->merge(User::query()
-                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
+                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery
+                    ->whereNotNull('approved_at')
+                    ->whereHas('services', fn ($serviceQuery) => $serviceQuery->where('is_active', true)))
                 ->whereNotNull('city')
                 ->pluck('city'))
             ->map(fn ($value) => trim((string) $value))
@@ -305,5 +317,4 @@ class SpaPageController extends Controller
             ->all();
     }
 }
-
 

@@ -12,7 +12,16 @@ class HomeController extends Controller
 {
     public function index(Request $request)
     {
-        $categories = Category::withCount('services')->get();
+        $categories = Category::query()
+            ->whereHas('services', function ($query) {
+                $query->where('is_active', true)
+                    ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'));
+            })
+            ->withCount(['services as services_count' => function ($query) {
+                $query->where('is_active', true)
+                    ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'));
+            }])
+            ->get();
         $servicesQuery = Service::with(['category', 'categories', 'provider.user'])
             ->where('is_active', true)
             ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'));
@@ -76,9 +85,15 @@ class HomeController extends Controller
     protected function locationSuggestions(): array
     {
         return collect()
-            ->merge(Provider::query()->whereNotNull('approved_at')->whereNotNull('service_area')->pluck('service_area'))
+            ->merge(Provider::query()
+                ->whereNotNull('approved_at')
+                ->whereNotNull('service_area')
+                ->whereHas('services', fn ($serviceQuery) => $serviceQuery->where('is_active', true))
+                ->pluck('service_area'))
             ->merge(User::query()
-                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
+                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery
+                    ->whereNotNull('approved_at')
+                    ->whereHas('services', fn ($serviceQuery) => $serviceQuery->where('is_active', true)))
                 ->whereNotNull('city')
                 ->pluck('city'))
             ->map(fn ($value) => trim((string) $value))

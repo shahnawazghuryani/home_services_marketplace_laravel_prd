@@ -67,8 +67,19 @@ class LandingController extends Controller
             });
         }
 
-        $categories = Category::withCount('services')
-            ->with(['services' => fn ($query) => $query->where('is_active', true)->latest()])
+        $categories = Category::query()
+            ->whereHas('services', function ($query) {
+                $query->where('is_active', true)
+                    ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'));
+            })
+            ->withCount(['services as services_count' => function ($query) {
+                $query->where('is_active', true)
+                    ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'));
+            }])
+            ->with(['services' => fn ($query) => $query
+                ->where('is_active', true)
+                ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
+                ->latest()])
             ->orderBy('name')
             ->get()
             ->map(function ($category) {
@@ -263,9 +274,15 @@ class LandingController extends Controller
     protected function locationSuggestions(): array
     {
         return collect()
-            ->merge(Provider::query()->whereNotNull('approved_at')->whereNotNull('service_area')->pluck('service_area'))
+            ->merge(Provider::query()
+                ->whereNotNull('approved_at')
+                ->whereNotNull('service_area')
+                ->whereHas('services', fn ($serviceQuery) => $serviceQuery->where('is_active', true))
+                ->pluck('service_area'))
             ->merge(User::query()
-                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
+                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery
+                    ->whereNotNull('approved_at')
+                    ->whereHas('services', fn ($serviceQuery) => $serviceQuery->where('is_active', true)))
                 ->whereNotNull('city')
                 ->pluck('city'))
             ->map(fn ($value) => trim((string) $value))
@@ -316,5 +333,3 @@ class LandingController extends Controller
             : '/media/' . implode('/', array_map('rawurlencode', explode('/', $normalizedPath)));
     }
 }
-
-

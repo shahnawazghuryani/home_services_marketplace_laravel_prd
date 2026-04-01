@@ -52,7 +52,13 @@ class ServiceController extends Controller
         }
 
         $services = $query->latest()->get();
-        $categories = Category::orderBy('name')->get();
+        $categories = Category::query()
+            ->whereHas('services', function ($categoryQuery) {
+                $categoryQuery->where('is_active', true)
+                    ->whereHas('provider', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'));
+            })
+            ->orderBy('name')
+            ->get();
         $location = $request->input('location');
 
         return view('services.index', [
@@ -466,9 +472,15 @@ class ServiceController extends Controller
     protected function locationSuggestions(): array
     {
         return collect()
-            ->merge(Provider::query()->whereNotNull('approved_at')->whereNotNull('service_area')->pluck('service_area'))
+            ->merge(Provider::query()
+                ->whereNotNull('approved_at')
+                ->whereNotNull('service_area')
+                ->whereHas('services', fn ($serviceQuery) => $serviceQuery->where('is_active', true))
+                ->pluck('service_area'))
             ->merge(User::query()
-                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery->whereNotNull('approved_at'))
+                ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery
+                    ->whereNotNull('approved_at')
+                    ->whereHas('services', fn ($serviceQuery) => $serviceQuery->where('is_active', true)))
                 ->whereNotNull('city')
                 ->pluck('city'))
             ->map(fn ($value) => trim((string) $value))
@@ -480,5 +492,3 @@ class ServiceController extends Controller
             ->all();
     }
 }
-
-

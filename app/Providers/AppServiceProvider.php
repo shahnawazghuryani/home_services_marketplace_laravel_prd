@@ -20,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $supportedLocales = ['en', 'ur', 'sd'];
+        $supportedLocales = ['en'];
         $request = app(Request::class);
 
         if ($request->has('lang') && in_array($request->query('lang'), $supportedLocales, true)) {
@@ -38,8 +38,6 @@ class AppServiceProvider extends ServiceProvider
         view()->share('currentLocale', $locale);
         view()->share('supportedLocales', [
             'en' => 'English',
-            'ur' => 'Urdu',
-            'sd' => 'Sindhi',
         ]);
         view()->share('supportContact', config('services.support'));
     }
