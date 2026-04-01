@@ -266,6 +266,13 @@ class ServiceController extends Controller
 
     protected function validateService(Request $request): array
     {
+        $rawUpload = $_FILES['image'] ?? null;
+        if (is_array($rawUpload) && isset($rawUpload['error']) && (int) $rawUpload['error'] !== UPLOAD_ERR_OK) {
+            throw ValidationException::withMessages([
+                'image' => $this->uploadErrorMessage((int) $rawUpload['error']),
+            ]);
+        }
+
         if ($request->hasFile('image') && ! $request->file('image')->isValid()) {
             throw ValidationException::withMessages([
                 'image' => 'Image upload failed: ' . $request->file('image')->getErrorMessage(),
@@ -323,6 +330,19 @@ class ServiceController extends Controller
         unset($validated['generated_image_svg']);
 
         return [$validated, $categoryIds];
+    }
+
+    protected function uploadErrorMessage(int $code): string
+    {
+        return match ($code) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Image is too large for current upload limits. Please upload a smaller file (recommended under 10MB).',
+            UPLOAD_ERR_PARTIAL => 'Image upload was interrupted. Please try again.',
+            UPLOAD_ERR_NO_FILE => 'No image file was selected.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Server upload temp folder is missing. Please contact admin.',
+            UPLOAD_ERR_CANT_WRITE => 'Server could not write uploaded image to disk. Please contact admin.',
+            UPLOAD_ERR_EXTENSION => 'A server extension blocked image upload. Please contact admin.',
+            default => 'Image failed to upload due to a server-side issue.',
+        };
     }
 
     protected function uniqueSlug(string $title, ?int $ignoreId = null): string
