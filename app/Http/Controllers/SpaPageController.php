@@ -113,6 +113,7 @@ class SpaPageController extends Controller
                 Service::query()
                     ->where('provider_id', $service->provider_id)
                     ->whereNotNull('image_path')
+                    ->where('image_path', '!=', '')
                     ->latest('id')
                     ->value('image_path')
             );
