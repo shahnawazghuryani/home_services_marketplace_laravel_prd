@@ -42,10 +42,9 @@ class HomeController extends Controller
         if ($request->filled('location')) {
             $location = $request->input('location');
             $servicesQuery->whereHas('provider', function ($providerQuery) use ($location) {
-                $providerQuery->where('service_area', 'like', "%{$location}%")
-                    ->orWhereHas('user', fn ($userQuery) => $userQuery
-                        ->where('city', 'like', "%{$location}%")
-                        ->orWhere('address', 'like', "%{$location}%"));
+                $providerQuery->whereHas('user', fn ($userQuery) => $userQuery
+                    ->where('city', 'like', "%{$location}%")
+                    ->orWhere('address', 'like', "%{$location}%"));
             });
         }
 
@@ -56,10 +55,9 @@ class HomeController extends Controller
             ->when($request->filled('location'), function ($query) use ($request) {
                 $location = $request->input('location');
                 $query->where(function ($inner) use ($location) {
-                    $inner->where('service_area', 'like', "%{$location}%")
-                        ->orWhereHas('user', fn ($userQuery) => $userQuery
-                            ->where('city', 'like', "%{$location}%")
-                            ->orWhere('address', 'like', "%{$location}%"));
+                    $inner->whereHas('user', fn ($userQuery) => $userQuery
+                        ->where('city', 'like', "%{$location}%")
+                        ->orWhere('address', 'like', "%{$location}%"));
                 });
             })
             ->latest()
@@ -85,11 +83,6 @@ class HomeController extends Controller
     protected function locationSuggestions(): array
     {
         return collect()
-            ->merge(Provider::query()
-                ->whereNotNull('approved_at')
-                ->whereNotNull('service_area')
-                ->whereHas('services', fn ($serviceQuery) => $serviceQuery->where('is_active', true))
-                ->pluck('service_area'))
             ->merge(User::query()
                 ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery
                     ->whereNotNull('approved_at')

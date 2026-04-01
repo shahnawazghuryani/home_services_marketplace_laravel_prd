@@ -43,10 +43,9 @@ class ServiceController extends Controller
             $location = $request->input('location');
             $query->where(function ($inner) use ($location) {
                 $inner->whereHas('provider', function ($providerQuery) use ($location) {
-                    $providerQuery->where('service_area', 'like', "%{$location}%")
-                        ->orWhereHas('user', fn ($userQuery) => $userQuery
-                            ->where('city', 'like', "%{$location}%")
-                            ->orWhere('address', 'like', "%{$location}%"));
+                    $providerQuery->whereHas('user', fn ($userQuery) => $userQuery
+                        ->where('city', 'like', "%{$location}%")
+                        ->orWhere('address', 'like', "%{$location}%"));
                 });
             });
         }
@@ -425,7 +424,6 @@ class ServiceController extends Controller
     protected function providerLocationLabel(Service $service): string
     {
         $parts = array_filter([
-            $service->provider->service_area,
             $service->provider->user->city,
             $service->provider->user->address,
         ]);
@@ -472,11 +470,6 @@ class ServiceController extends Controller
     protected function locationSuggestions(): array
     {
         return collect()
-            ->merge(Provider::query()
-                ->whereNotNull('approved_at')
-                ->whereNotNull('service_area')
-                ->whereHas('services', fn ($serviceQuery) => $serviceQuery->where('is_active', true))
-                ->pluck('service_area'))
             ->merge(User::query()
                 ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery
                     ->whereNotNull('approved_at')

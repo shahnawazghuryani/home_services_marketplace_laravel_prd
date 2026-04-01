@@ -163,7 +163,6 @@ class DashboardController extends Controller
                         'email' => $provider->user->email,
                         'login_username' => $provider->user->email,
                         'login_password_note' => 'Password is encrypted and cannot be displayed.',
-                        'service_area' => $provider->service_area,
                         'approved' => (bool) $provider->approved_at,
                         'total_views' => (int) $visitSummary['total_views'],
                         'today_views' => (int) $visitSummary['today_views'],
@@ -218,7 +217,6 @@ class DashboardController extends Controller
                 'notifications' => $notifications,
                 'profile' => [
                     'approved' => (bool) $profile?->approved_at,
-                    'service_area' => $profile?->service_area,
                     'availability' => $profile?->availability,
                     'hourly_rate' => (float) ($profile?->hourly_rate ?? 0),
                 ],
@@ -226,7 +224,6 @@ class DashboardController extends Controller
                     'services' => $services->count(),
                     'bookings' => $bookings->count(),
                     'approved' => $profile?->approved_at ? 'Yes' : 'No',
-                    'area' => $profile?->service_area,
                     'total_views' => $trafficSummary['total_views'],
                     'today_views' => $trafficSummary['today_views'],
                 ],
@@ -337,7 +334,6 @@ class DashboardController extends Controller
                 'bio' => $profile->bio,
                 'experience_years' => $profile->experience_years,
                 'hourly_rate' => (float) $profile->hourly_rate,
-                'service_area' => $profile->service_area,
                 'availability' => $profile->availability,
             ],
         ]);
@@ -357,7 +353,6 @@ class DashboardController extends Controller
             'bio' => ['required', 'string', 'max:2000'],
             'experience_years' => ['required', 'integer', 'min:0'],
             'hourly_rate' => ['required', 'numeric', 'min:0'],
-            'service_area' => ['required', 'string', 'max:255'],
             'availability' => ['required', 'string', 'max:255'],
         ]);
 
@@ -368,7 +363,6 @@ class DashboardController extends Controller
 
         $this->contentSafety->ensureCleanText([
             'bio' => $data['bio'],
-            'service_area' => $data['service_area'],
         ]);
 
         $user->update([
@@ -382,7 +376,6 @@ class DashboardController extends Controller
             'bio' => $data['bio'],
             'experience_years' => $data['experience_years'],
             'hourly_rate' => $data['hourly_rate'],
-            'service_area' => $data['service_area'],
             'availability' => $data['availability'],
         ]);
 
@@ -711,7 +704,6 @@ class DashboardController extends Controller
             <div class="row"><strong>Email:</strong> {$provider->user->email}</div>
             <div class="row"><strong>Phone:</strong> {$provider->user->phone}</div>
             <div class="row"><strong>City:</strong> {$provider->user->city}</div>
-            <div class="row"><strong>Service area:</strong> {$provider->service_area}</div>
             <div class="row"><strong>Current status:</strong> {$currentStatus}</div>
         </div>
     </div>

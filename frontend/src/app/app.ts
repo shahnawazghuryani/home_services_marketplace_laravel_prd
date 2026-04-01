@@ -774,7 +774,7 @@ export class App {
       audience: 'Service providers',
       steps: [
         'Log in with your provider account and open the dashboard.',
-        'Complete your profile and service area.',
+        'Complete your profile details.',
         'Create a new service using the AI prompt or the manual form.',
       ],
       voiceover: [
@@ -1213,7 +1213,6 @@ export class App {
         [
           this.providerProfileForm.city,
           this.providerProfileForm.address,
-          this.providerProfileForm.service_area,
         ]
           .map((item) => item.trim())
           .filter(Boolean)
@@ -1227,7 +1226,6 @@ export class App {
         [
           this.registerForm.city,
           this.registerForm.address,
-          this.registerForm.service_area,
           this.providerProfileForm.city,
           this.providerProfileForm.address,
         ]
@@ -1239,71 +1237,17 @@ export class App {
 
   locationSuggestionOptions(suggestions: string[]): MapLocationSuggestion[] {
     const term = this.location().trim().toLowerCase();
-    const local = suggestions
-      .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
-      .map((suggestion) => ({ label: suggestion, source: 'saved' as const }));
-    const remote = this.locationRemoteSuggestions()
-      .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
-      .map((suggestion) => ({ label: suggestion, source: 'map' as const }));
-    const seen = new Set<string>();
-
-    return [...local, ...remote]
-      .filter((item) => {
-        const key = item.label.trim().toLowerCase();
-        if (!key || seen.has(key)) {
-          return false;
-        }
-
-        seen.add(key);
-        return true;
-      })
-      .slice(0, 8);
+    return this.uniqueSavedLocationSuggestions(suggestions, term);
   }
 
   providerLocationSuggestionOptions(suggestions: string[]): MapLocationSuggestion[] {
     const term = this.providerLocationInput().trim().toLowerCase();
-    const local = suggestions
-      .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
-      .map((suggestion) => ({ label: suggestion, source: 'saved' as const }));
-    const remote = this.providerLocationRemoteSuggestions()
-      .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
-      .map((suggestion) => ({ label: suggestion, source: 'map' as const }));
-    const seen = new Set<string>();
-
-    return [...local, ...remote]
-      .filter((item) => {
-        const key = item.label.trim().toLowerCase();
-        if (!key || seen.has(key)) {
-          return false;
-        }
-
-        seen.add(key);
-        return true;
-      })
-      .slice(0, 8);
+    return this.uniqueSavedLocationSuggestions(suggestions, term);
   }
 
   registerLocationSuggestionOptions(suggestions: string[]): MapLocationSuggestion[] {
     const term = this.registerLocationInput().trim().toLowerCase();
-    const local = suggestions
-      .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
-      .map((suggestion) => ({ label: suggestion, source: 'saved' as const }));
-    const remote = this.registerLocationRemoteSuggestions()
-      .filter((suggestion) => !term || suggestion.toLowerCase().includes(term))
-      .map((suggestion) => ({ label: suggestion, source: 'map' as const }));
-    const seen = new Set<string>();
-
-    return [...local, ...remote]
-      .filter((item) => {
-        const key = item.label.trim().toLowerCase();
-        if (!key || seen.has(key)) {
-          return false;
-        }
-
-        seen.add(key);
-        return true;
-      })
-      .slice(0, 8);
+    return this.uniqueSavedLocationSuggestions(suggestions, term);
   }
 
   filteredCategorySuggestions(categories: Array<{ id: number; name: string; slug: string }>): Array<{ id: number; name: string; slug: string }> {
@@ -1324,12 +1268,14 @@ export class App {
   onRegisterLocationInput(value: string): void {
     this.registerLocationInput.set(value);
     this.registerLocationMenuOpen.set(true);
-    this.scheduleRegisterRemoteLocationSuggestions(value);
+    this.registerLocationRemoteSuggestions.set([]);
+    this.registerLocationSuggestionsLoading.set(false);
   }
 
   openRegisterLocationMenu(): void {
     this.registerLocationMenuOpen.set(true);
-    this.scheduleRegisterRemoteLocationSuggestions(this.registerLocationInput());
+    this.registerLocationRemoteSuggestions.set([]);
+    this.registerLocationSuggestionsLoading.set(false);
   }
 
   closeRegisterLocationMenu(): void {
@@ -1351,12 +1297,14 @@ export class App {
   onProviderLocationInput(value: string): void {
     this.providerLocationInput.set(value);
     this.providerLocationMenuOpen.set(true);
-    this.scheduleProviderRemoteLocationSuggestions(value);
+    this.providerLocationRemoteSuggestions.set([]);
+    this.providerLocationSuggestionsLoading.set(false);
   }
 
   openProviderLocationMenu(): void {
     this.providerLocationMenuOpen.set(true);
-    this.scheduleProviderRemoteLocationSuggestions(this.providerLocationInput());
+    this.providerLocationRemoteSuggestions.set([]);
+    this.providerLocationSuggestionsLoading.set(false);
   }
 
   closeProviderLocationMenu(): void {
@@ -1740,6 +1688,39 @@ export class App {
       .filter(Boolean);
 
     return parts.slice(0, 3).join(', ');
+  }
+
+  private uniqueSavedLocationSuggestions(suggestions: string[], term: string): MapLocationSuggestion[] {
+    const filtered = suggestions.filter((suggestion) => !term || suggestion.toLowerCase().includes(term));
+    const chosen = new Map<string, string>();
+
+    for (const suggestion of filtered) {
+      const label = suggestion.trim();
+      if (!label) {
+        continue;
+      }
+
+      const key = this.normalizeLocationSuggestionKey(label);
+      const existing = chosen.get(key);
+
+      if (!existing || label.length < existing.length) {
+        chosen.set(key, label);
+      }
+    }
+
+    return Array.from(chosen.values())
+      .sort((left, right) => left.localeCompare(right))
+      .slice(0, 8)
+      .map((label) => ({ label, source: 'saved' as const }));
+  }
+
+  private normalizeLocationSuggestionKey(value: string): string {
+    const primary = value.split(',')[0]?.trim().toLowerCase() ?? '';
+
+    return primary
+      .replace(/\bcity\b/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
   }
 
   toggleServiceCategory(categoryId: number | string): void {
@@ -2626,7 +2607,7 @@ export class App {
             bio: response.profile.bio,
             experience_years: response.profile.experience_years,
             hourly_rate: response.profile.hourly_rate,
-            service_area: response.profile.service_area,
+            service_area: '',
             availability: response.profile.availability,
           };
           this.providerLocationInput.set(response.user.address || response.user.city || '');

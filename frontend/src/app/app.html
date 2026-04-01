@@ -157,7 +157,7 @@
                     </div>
                     <h3>{{ service.title }}</h3>
                     <div class="notice">
-                      {{ service.provider.service_area }} - {{ service.provider.city }}
+                      {{ service.provider.city }}
                       @if (hasPositiveNumber(service.duration_minutes)) {
                         - {{ service.duration_minutes }} {{ t('mins') }}
                       }
@@ -205,7 +205,6 @@
             <div class="grid grid-3">
               @for (provider of view.providers; track provider.id) {
                 <article class="card">
-                  <span class="badge">{{ provider.service_area }}</span>
                   <h3>{{ provider.name }}</h3>
                   <p>{{ provider.bio }}</p>
                   <div class="notice">{{ provider.city }} - {{ provider.experience_years }} {{ t('yearsExperience') }} - PKR {{ provider.hourly_rate | number:'1.0-0' }}/hr</div>
@@ -444,7 +443,7 @@
                 }
               </div>
               <div class="notice">{{ detail.service.description }}</div>
-              <div class="notice detail-note">{{ t('serviceArea') }}: {{ detail.provider_location_label }}</div>
+              <div class="notice detail-note">{{ t('location') }}: {{ detail.provider_location_label }}</div>
               <div class="notice detail-note">
                 <strong>Phone</strong>
                 <div>{{ detail.service.provider.phone }}</div>
@@ -471,7 +470,7 @@
                     <p class="detail-ai-copy">{{ providerAi.summary }}</p>
                     @for (provider of providerAi.providers; track provider.id) {
                       <div class="detail-ai-provider">
-                        <a [href]="backendUrl('/providers/' + provider.id)">{{ provider.name }}</a> - {{ provider.city }} - {{ provider.service_area }} - PKR {{ provider.hourly_rate | number:'1.0-0' }}/hr
+                        <a [href]="backendUrl('/providers/' + provider.id)">{{ provider.name }}</a> - {{ provider.city }} - PKR {{ provider.hourly_rate | number:'1.0-0' }}/hr
                         <div><strong>Phone:</strong> {{ provider.phone }}</div>
                         <div class="muted">{{ provider.reason }}</div>
                         <div class="stack-actions">
@@ -525,7 +524,6 @@
                 <div class="detail-cover"></div>
               }
               <div>
-                <span class="badge">{{ detail.provider.service_area }}</span>
                 <h1>{{ detail.provider.name }}</h1>
                 <p>{{ detail.provider.bio }}</p>
                 <p class="muted">{{ detail.provider.experience_years }} years experience - PKR {{ detail.provider.hourly_rate | number:'1.0-0' }}/hr - {{ detail.provider.availability }}</p>
@@ -853,7 +851,7 @@
                       <div>
                         <strong>{{ provider.name }}</strong>
                         <div class="muted">
-                          {{ provider.service_area }} - {{ provider.approved ? 'Approved' : 'Pending' }}
+                          {{ provider.approved ? 'Approved' : 'Pending' }}
                           - {{ provider.total_views ?? 0 }} total views
                           - {{ provider.today_views ?? 0 }} today
                         </div>
@@ -1049,7 +1047,7 @@
             <div class="auth-showcase">
               <span class="kicker">{{ t('providerProfile') }}</span>
               <h2>Make your profile look professional.</h2>
-              <p>Update your personal details, service area, availability, and bio here.</p>
+              <p>Update your personal details, availability, and bio here.</p>
             </div>
             <div class="auth-card">
               <span class="badge">Edit profile</span>
@@ -1090,7 +1088,6 @@
                   </label>
                   <label>{{ t('experienceYears') }}<input type="number" name="experience_years" [(ngModel)]="providerProfileForm.experience_years" required></label>
                   <label>{{ t('hourlyRate') }}<input type="number" name="hourly_rate" [(ngModel)]="providerProfileForm.hourly_rate" required></label>
-                  <label>{{ t('serviceAreaField') }}<input type="text" name="service_area" [(ngModel)]="providerProfileForm.service_area" required></label>
                   <label>{{ t('availability') }}<input type="text" name="availability" [(ngModel)]="providerProfileForm.availability" required></label>
                 </div>
                 <label>{{ t('bio') }}<textarea name="bio" [(ngModel)]="providerProfileForm.bio" required></textarea></label>
@@ -1337,7 +1334,6 @@
                   <div class="form-section auth-section">
                     <div class="form-section-title">Professional profile</div>
                     <div class="grid grid-2">
-                      <label>Service area<input type="text" name="service_area" [(ngModel)]="registerForm.service_area" placeholder="DHA, Gulshan, Clifton"></label>
                       <label>Experience years<input type="number" name="experience_years" [(ngModel)]="registerForm.experience_years"></label>
                       <label>Hourly rate<input type="number" name="hourly_rate" [(ngModel)]="registerForm.hourly_rate"></label>
                       <label>Availability<input type="text" name="availability" [(ngModel)]="registerForm.availability" placeholder="Mon-Sat, 10 AM - 7 PM"></label>

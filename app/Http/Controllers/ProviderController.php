@@ -13,7 +13,6 @@ class ProviderController extends Controller
             ->findOrFail($provider);
 
         $locationLabel = collect([
-            $provider->service_area,
             $provider->user->city,
             $provider->user->address,
         ])->filter()->implode(', ');

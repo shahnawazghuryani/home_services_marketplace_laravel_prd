@@ -35,10 +35,9 @@ class SpaPageController extends Controller
             $location = $request->input('location');
             $query->where(function ($inner) use ($location) {
                 $inner->whereHas('provider', function ($providerQuery) use ($location) {
-                    $providerQuery->where('service_area', 'like', "%{$location}%")
-                        ->orWhereHas('user', fn ($userQuery) => $userQuery
-                            ->where('city', 'like', "%{$location}%")
-                            ->orWhere('address', 'like', "%{$location}%"));
+                    $providerQuery->whereHas('user', fn ($userQuery) => $userQuery
+                        ->where('city', 'like', "%{$location}%")
+                        ->orWhere('address', 'like', "%{$location}%"));
                 });
             });
         }
@@ -66,7 +65,6 @@ class SpaPageController extends Controller
                     'name' => $service->provider->user->name,
                     'phone' => $service->provider->user->phone,
                     'city' => $service->provider->user->city,
-                    'service_area' => $service->provider->service_area,
                     'rating_avg' => (float) ($providerRatings->get($service->provider->user_id)->rating_avg ?? 0),
                     'reviews_count' => (int) ($providerRatings->get($service->provider->user_id)->reviews_count ?? 0),
                 ],
@@ -142,7 +140,6 @@ class SpaPageController extends Controller
                     'name' => $service->provider->user->name,
                     'phone' => $service->provider->user->phone,
                     'city' => $service->provider->user->city,
-                    'service_area' => $service->provider->service_area,
                 ],
             ],
             'cover_image_url' => $fallbackCoverImageUrl,
@@ -183,7 +180,6 @@ class SpaPageController extends Controller
         $coverImageUrl = ($services->first(fn (array $service) => filled($service['image_url'])) ?? [])['image_url'] ?? null;
 
         $locationLabel = collect([
-            $provider->service_area,
             $provider->user->city,
             $provider->user->address,
         ])->filter()->implode(', ');
@@ -195,7 +191,6 @@ class SpaPageController extends Controller
                 'phone' => $provider->user->phone,
                 'city' => $provider->user->city,
                 'address' => $provider->user->address,
-                'service_area' => $provider->service_area,
                 'bio' => $provider->bio,
                 'experience_years' => $provider->experience_years,
                 'hourly_rate' => (float) $provider->hourly_rate,
@@ -250,7 +245,6 @@ class SpaPageController extends Controller
     protected function providerLocationLabel(Service $service): string
     {
         $parts = array_filter([
-            $service->provider->service_area,
             $service->provider->user->city,
             $service->provider->user->address,
         ]);
@@ -297,11 +291,6 @@ class SpaPageController extends Controller
     protected function locationSuggestions(): array
     {
         return collect()
-            ->merge(Provider::query()
-                ->whereNotNull('approved_at')
-                ->whereNotNull('service_area')
-                ->whereHas('services', fn ($serviceQuery) => $serviceQuery->where('is_active', true))
-                ->pluck('service_area'))
             ->merge(User::query()
                 ->whereHas('providerProfile', fn ($providerQuery) => $providerQuery
                     ->whereNotNull('approved_at')

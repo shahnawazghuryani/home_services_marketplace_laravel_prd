@@ -92,7 +92,6 @@ class AuthController extends Controller
             'bio' => ['nullable', 'string'],
             'experience_years' => ['nullable', 'integer', 'min:0'],
             'hourly_rate' => ['nullable', 'numeric', 'min:0'],
-            'service_area' => ['nullable', 'string', 'max:255'],
             'availability' => ['nullable', 'string', 'max:255'],
             'redirect_to' => ['nullable', 'string', 'max:500'],
         ]);
@@ -107,7 +106,6 @@ class AuthController extends Controller
         if (($data['role'] ?? null) === 'provider') {
             $this->contentSafety->ensureCleanText([
                 'bio' => $data['bio'] ?? '',
-                'service_area' => $data['service_area'] ?? '',
             ]);
         }
 
@@ -127,7 +125,7 @@ class AuthController extends Controller
                 'bio' => $data['bio'] ?? 'Newly onboarded service provider.',
                 'experience_years' => $data['experience_years'] ?? 0,
                 'hourly_rate' => $data['hourly_rate'] ?? 0,
-                'service_area' => $data['service_area'] ?? $data['city'],
+                'service_area' => $data['city'],
                 'availability' => $data['availability'] ?? 'Mon-Sat, 10 AM - 7 PM',
                 'approved_at' => now(),
                 'is_featured' => false,

@@ -49,10 +49,9 @@ class AiController extends Controller
             ->whereNotNull('approved_at')
             ->when($data['location'] ?? null, function ($query, $location) {
                 $query->where(function ($inner) use ($location) {
-                    $inner->where('service_area', 'like', "%{$location}%")
-                        ->orWhereHas('user', fn ($userQuery) => $userQuery
-                            ->where('city', 'like', "%{$location}%")
-                            ->orWhere('address', 'like', "%{$location}%"));
+                    $inner->whereHas('user', fn ($userQuery) => $userQuery
+                        ->where('city', 'like', "%{$location}%")
+                        ->orWhere('address', 'like', "%{$location}%"));
                 });
             })
             ->latest()
@@ -64,7 +63,6 @@ class AiController extends Controller
                 'id' => $provider->id,
                 'name' => $provider->user->name,
                 'city' => $provider->user->city,
-                'service_area' => $provider->service_area,
                 'experience_years' => $provider->experience_years,
                 'hourly_rate' => (float) $provider->hourly_rate,
                 'availability' => $provider->availability,
@@ -97,7 +95,6 @@ class AiController extends Controller
                     'name' => $provider->user->name,
                     'phone' => $provider->user->phone,
                     'city' => $provider->user->city,
-                    'service_area' => $provider->service_area,
                     'hourly_rate' => (float) $provider->hourly_rate,
                     'reason' => $reasons->get($provider->id)['reason'] ?? 'Recommended by AI.',
                 ];
